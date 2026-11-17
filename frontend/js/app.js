@@ -28,10 +28,11 @@ function rotaDoPerfil(perfil) {
 
 function atualizarHeader(rotaDePerfil) {
   const perfil = getPerfil();
-  const exibir = Boolean(perfil && rotaDePerfil);
+  const perfilInfo = perfil ? PERFIS[perfil] : null;
+  const exibir = Boolean(perfilInfo && rotaDePerfil);
   perfilBadge.hidden = !exibir;
   trocarPerfil.hidden = !exibir;
-  if (exibir) perfilBadge.textContent = PERFIS[perfil].label;
+  if (exibir) perfilBadge.textContent = perfilInfo.label;
 }
 
 async function render() {
@@ -59,7 +60,7 @@ async function render() {
       <div class="empty-state">
         <h2>Não foi possível carregar</h2>
         <p class="muted">${esc(erro.message)}</p>
-        <p class="muted small">Dica: sirva a pasta <code>frontend/</code> via HTTP (ex.: <code>python -m http.server</code>). Abrir o arquivo direto (file://) bloqueia o fetch dos JSON.</p>
+        <p class="muted small">Dica: sirva a pasta <code>frontend/</code> via HTTP (ex.: <code>npx serve frontend -l 3000</code>) e mantenha o back-end em <code>http://localhost:8080</code>.</p>
       </div>`;
   }
 }

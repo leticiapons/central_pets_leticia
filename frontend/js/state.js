@@ -16,7 +16,8 @@ export const PERFIS = {
 };
 
 export function getPerfil() {
-  return localStorage.getItem(PERFIL_KEY);
+  const perfil = localStorage.getItem(PERFIL_KEY);
+  return perfil && Object.prototype.hasOwnProperty.call(PERFIS, perfil) ? perfil : null;
 }
 
 export function setPerfil(perfil) {

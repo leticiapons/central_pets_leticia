@@ -1,6 +1,5 @@
 import { PERFIS, getPerfil, setPerfil } from '../state.js';
-import { esc, toast } from '../components.js';
-import { resetarMutacoes } from '../mock.js';
+import { esc } from '../components.js';
 
 const ICONES = {
   ADM: `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21V5a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v16"/><path d="M16 9h2a2 2 0 0 1 2 2v10"/><path d="M2 21h20"/><path d="M8 7h4M8 11h4M8 15h4"/></svg>`,
@@ -28,8 +27,7 @@ export function renderPerfil(app) {
     </div>
 
     <div class="perfil-foot">
-      <p class="muted small">Dados fictícios, salvos apenas neste navegador.</p>
-      <button class="link-btn" type="button" id="reset-demo">Resetar dados da demonstração</button>
+      <p class="muted small">Prototype MVP: o perfil ativo fica salvo apenas neste navegador.</p>
     </div>`;
 
   app.querySelectorAll('[data-perfil]').forEach((botao) => {
@@ -37,10 +35,5 @@ export function renderPerfil(app) {
       setPerfil(botao.dataset.perfil);
       location.hash = `#/${botao.dataset.perfil.toLowerCase()}`;
     });
-  });
-
-  app.querySelector('#reset-demo').addEventListener('click', () => {
-    resetarMutacoes();
-    toast('Dados da demonstração resetados.');
   });
 }

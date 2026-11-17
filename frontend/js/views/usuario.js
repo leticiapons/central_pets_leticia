@@ -1,6 +1,7 @@
 import * as api from '../api.js';
 import { esc, animalCard } from '../components.js';
 import { abrirDoacao } from '../doacao-modal.js';
+import { mesmoId } from '../ids.js';
 
 export async function renderUsuario(app) {
   const [ong, animais] = await Promise.all([
@@ -30,7 +31,8 @@ export async function renderUsuario(app) {
 
   app.querySelectorAll('[data-doar]').forEach((botao) => {
     botao.addEventListener('click', () => {
-      const animal = animais.find((item) => item.id === botao.dataset.doar);
+      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.doar));
+      if (!animal) return;
       abrirDoacao({
         animal,
         ong,

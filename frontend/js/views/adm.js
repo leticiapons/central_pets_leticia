@@ -1,4 +1,5 @@
 import * as api from '../api.js';
+import { mesmoId } from '../ids.js';
 import {
   esc, fmtMoeda, fmtData, animalCard, abrirModal,
   toast, confirmar
@@ -79,8 +80,9 @@ function renderAnimais(container, contexto) {
 
   container.querySelectorAll('[data-ver]').forEach((botao) => {
     botao.addEventListener('click', () => {
-      const animal = animais.find((item) => item.id === botao.dataset.ver);
-      const doacoesDoAnimal = doacoes.filter((doacao) => doacao.animalId === animal.id);
+      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.ver));
+      if (!animal) return;
+      const doacoesDoAnimal = doacoes.filter((doacao) => mesmoId(doacao.animalId, animal.id));
       abrirModal({
         titulo: `Doações para ${animal.nome}`,
         largo: true,
@@ -93,7 +95,8 @@ function renderAnimais(container, contexto) {
 
   container.querySelectorAll('[data-inativar]').forEach((botao) => {
     botao.addEventListener('click', async () => {
-      const animal = animais.find((item) => item.id === botao.dataset.inativar);
+      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.inativar));
+      if (!animal) return;
       const confirmou = await confirmar({
         titulo: 'Inativar animal',
         mensagem: `Inativar ${animal.nome}? Ele deixará de aparecer para novas doações, mas o histórico permanece.`,
@@ -144,7 +147,6 @@ function renderNovoAnimal(container, contexto) {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        padrinhoIds: [],
         mensalidadeSugerida: 50
       });
       toast('Animal cadastrado com sucesso.');
@@ -158,9 +160,11 @@ function renderNovoAnimal(container, contexto) {
 
 function renderDoacoes(container, contexto) {
   const { doacoes, animais } = contexto;
-  const total = doacoes.reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
+  const total = doacoes
+    .filter((doacao) => doacao.status !== 'CANCELADA')
+    .reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
   const ativos = animais.filter((animal) => animal.status === 'ATIVO').length;
-  const mapaAnimais = new Map(animais.map((animal) => [animal.id, animal.nome]));
+  const mapaAnimais = new Map(animais.map((animal) => [String(animal.id), animal.nome]));
 
   container.innerHTML = `
     <div class="stats">
@@ -191,7 +195,7 @@ function tabelaDoacoes(doacoes, mapaAnimais = null) {
           ${doacoes.map((doacao) => `
             <tr>
               <td>${fmtData(doacao.data)}</td>
-              ${mapaAnimais ? `<td>${esc(mapaAnimais.get(doacao.animalId) || '—')}</td>` : ''}
+              ${mapaAnimais ? `<td>${esc(mapaAnimais.get(String(doacao.animalId)) || '—')}</td>` : ''}
               <td>${esc(doacao.doadorNome || 'Anônimo')}</td>
               <td>${esc(PERFIL_DOADOR[doacao.perfil] || doacao.perfil)}</td>
               <td class="valor">${fmtMoeda(doacao.valor)}</td>
