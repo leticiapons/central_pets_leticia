@@ -2,18 +2,19 @@ package br.com.ongs.atividadeongs.service;
 
 import br.com.ongs.atividadeongs.dto.DoacaoRequest;
 import br.com.ongs.atividadeongs.dto.DoacaoResponse;
+import br.com.ongs.atividadeongs.exception.RecursoNaoEncontradoException;
+import br.com.ongs.atividadeongs.exception.RegraNegocioException;
 import br.com.ongs.atividadeongs.models.*;
 import br.com.ongs.atividadeongs.repository.AnimalRepository;
 import br.com.ongs.atividadeongs.repository.DoacaoRepository;
 import br.com.ongs.atividadeongs.repository.UsuarioRepository;
-import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class DoacaoService {
@@ -43,76 +44,46 @@ public class DoacaoService {
     @Transactional
     public DoacaoResponse criar(DoacaoRequest dados) {
         if (dados.animalId() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Informe o animal da doação."
-            );
+            throw new IllegalArgumentException("Informe o animal da doação.");
         }
 
         BigDecimal valor = dados.valor();
 
         if (valor == null || valor.signum() <= 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "O valor deve ser maior que zero."
-            );
+            throw new IllegalArgumentException("O valor deve ser maior que zero.");
         }
 
         if (valor.stripTrailingZeros().scale() > 2
                 || valor.compareTo(new BigDecimal("9999999999.99")) > 0) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Informe um valor válido com até duas casas decimais."
-            );
+            throw new IllegalArgumentException("Informe um valor válido com até duas casas decimais.");
         }
 
         Animal animal = animalRepository.findById(dados.animalId())
-                .orElseThrow(() -> new ResponseStatusException(
-                        HttpStatus.NOT_FOUND,
-                        "Animal não encontrado."
-                ));
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Animal não encontrado."));
 
         if (animal.getStatus() != StatusAnimal.ATIVO) {
-            throw new ResponseStatusException(
-                    HttpStatus.CONFLICT,
-                    "O animal está inativo."
-            );
+            throw new RegraNegocioException("O animal está inativo.");
         }
 
         if (dados.perfil() == null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Informe o perfil do doador."
-            );
+            throw new IllegalArgumentException("Informe o perfil do doador.");
         }
 
         Usuario padrinho = null;
 
         if (dados.perfil() == PerfilUsuario.PADRINHO) {
             if (dados.padrinhoId() == null) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "Informe o padrinho da doação."
-                );
+                throw new IllegalArgumentException("Informe o padrinho da doação.");
             }
 
             padrinho = usuarioRepository.findById(dados.padrinhoId())
-                    .orElseThrow(() -> new ResponseStatusException(
-                            HttpStatus.NOT_FOUND,
-                            "Padrinho não encontrado."
-                    ));
+                    .orElseThrow(() -> new RecursoNaoEncontradoException("Padrinho não encontrado."));
 
             if (padrinho.getPerfil() != PerfilUsuario.PADRINHO) {
-                throw new ResponseStatusException(
-                        HttpStatus.BAD_REQUEST,
-                        "O usuário informado não possui perfil de padrinho."
-                );
+                throw new IllegalArgumentException("O usuário informado não possui perfil de padrinho.");
             }
         } else if (dados.padrinhoId() != null) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "Somente doações de padrinhos podem informar padrinhoId."
-            );
+            throw new IllegalArgumentException("Somente doações de padrinhos podem informar padrinhoId.");
         }
 
         String nome = dados.doadorNome();
@@ -124,10 +95,7 @@ public class DoacaoService {
         }
 
         if (nome.length() > 120) {
-            throw new ResponseStatusException(
-                    HttpStatus.BAD_REQUEST,
-                    "O nome do doador deve ter até 120 caracteres."
-            );
+            throw new IllegalArgumentException("O nome do doador deve ter até 120 caracteres.");
         }
 
         Doacao doacao = new Doacao();
@@ -138,6 +106,17 @@ public class DoacaoService {
         doacao.setValor(valor);
         doacao.setData(Instant.now());
         doacao.setStatus(StatusDoacao.DOADO);
+
+        // Uma doação feita como padrinho consolida o apadrinhamento do animal.
+        if (padrinho != null) {
+            Usuario padrinhoDaDoacao = padrinho;
+            boolean jaVinculado = animal.getPadrinhos().stream()
+                    .anyMatch(p -> Objects.equals(p.getId(), padrinhoDaDoacao.getId()));
+            if (!jaVinculado) {
+                animal.getPadrinhos().add(padrinho);
+                animalRepository.save(animal);
+            }
+        }
 
         return toResponse(doacaoRepository.save(doacao));
     }

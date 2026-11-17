@@ -28,4 +28,12 @@ public record OngResponse(
                 ong.getEndereco()
         );
     }
+
+    /**
+     * Representação usada quando ainda não existe ONG cadastrada.
+     * Permite que o formulário de cadastro seja carregado pelo front-end.
+     */
+    public static OngResponse vazio() {
+        return new OngResponse(null, "", "", "", null, "", "");
+    }
 }

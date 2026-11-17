@@ -29,10 +29,11 @@ public class OngController {
     @GetMapping
     public ResponseEntity<OngResponse> obter() {
         //metodos do Spring Data JPA via repository
-        return ongRepository.findFirstByOrderByIdAsc()
-                .map(OngResponse::from)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
+        return ResponseEntity.ok(
+                ongRepository.findFirstByOrderByIdAsc()
+                        .map(OngResponse::from)
+                        .orElseGet(OngResponse::vazio)
+        );
     }
 
     @PutMapping

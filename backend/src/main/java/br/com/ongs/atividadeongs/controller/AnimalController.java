@@ -3,8 +3,10 @@ package br.com.ongs.atividadeongs.controller;
 import br.com.ongs.atividadeongs.dto.AnimalRequest;
 import br.com.ongs.atividadeongs.dto.AnimalResponse;
 import br.com.ongs.atividadeongs.dto.AnimalStatusRequest;
+import br.com.ongs.atividadeongs.dto.PadrinhoRequest;
 import br.com.ongs.atividadeongs.service.AnimalService;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -46,5 +48,17 @@ public class AnimalController {
     public ResponseEntity<AnimalResponse> alterarStatus(@PathVariable Long id,
                                                         @RequestBody AnimalStatusRequest dados) {
         return ResponseEntity.ok(service.atualizarStatus(id, dados.status()));
+    }
+
+    @PostMapping("/{id}/padrinhos")
+    public ResponseEntity<AnimalResponse> adicionarPadrinho(@PathVariable Long id,
+                                                            @RequestBody PadrinhoRequest dados) {
+        return ResponseEntity.ok(service.adicionarPadrinho(id, dados.usuarioId()));
+    }
+
+    @DeleteMapping("/{id}/padrinhos/{usuarioId}")
+    public ResponseEntity<AnimalResponse> removerPadrinho(@PathVariable Long id,
+                                                          @PathVariable Long usuarioId) {
+        return ResponseEntity.ok(service.removerPadrinho(id, usuarioId));
     }
 }
