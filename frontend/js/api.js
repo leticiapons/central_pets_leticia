@@ -93,6 +93,22 @@ export async function criarAnimal(dados) {
   return http('/animais', { method: 'POST', body: JSON.stringify(payload) });
 }
 
+export async function atualizarAnimal(id, dados) {
+  if (USAR_MOCK) {
+    throw new Error('A edição de animais está disponível apenas com a API real.');
+  }
+
+  return http(`/animais/${id}`, { method: 'PUT', body: JSON.stringify(dados) });
+}
+
+export async function reativarAnimal(id) {
+  if (USAR_MOCK) {
+    return mock.alterarStatusAnimal(id, 'ATIVO');
+  }
+
+  return http(`/animais/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'ATIVO' }) });
+}
+
 export async function inativarAnimal(id) {
   const animal = await obterAnimal(id);
   if (!animal) throw new Error('Animal não encontrado.');

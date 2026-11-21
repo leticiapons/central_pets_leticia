@@ -54,6 +54,27 @@ public class AnimalService {
 
     @Transactional
     public AnimalResponse criar(AnimalRequest req) {
+        Animal animal = new Animal();
+        aplicarDados(animal, req);
+        if (req.status() != null) {
+            animal.setStatus(req.status());
+        }
+        return toResponse(animalRepository.save(animal));
+    }
+
+    /**
+     * Atualiza os dados cadastrais de um animal (nome, espécie, idade, descrição,
+     * meta, necessidades e foto). O status não muda aqui: para inativar ou reativar,
+     * use {@link #atualizarStatus(Long, StatusAnimal)}.
+     */
+    @Transactional
+    public AnimalResponse atualizar(Long id, AnimalRequest req) {
+        Animal animal = buscarEntidade(id);
+        aplicarDados(animal, req);
+        return toResponse(animalRepository.save(animal));
+    }
+
+    private void aplicarDados(Animal animal, AnimalRequest req) {
         String nome = textoObrigatorio(req.nome(), "nome", TAMANHO_MAXIMO_NOME);
         String especie = textoObrigatorio(req.especie(), "espécie", TAMANHO_MAXIMO_ESPECIE);
         String descricao = textoObrigatorio(req.descricao(), "descrição", null);
@@ -70,7 +91,6 @@ public class AnimalService {
             throw new IllegalArgumentException("A idade deve ter até " + TAMANHO_MAXIMO_IDADE + " caracteres.");
         }
 
-        Animal animal = new Animal();
         animal.setNome(nome);
         animal.setEspecie(especie);
         animal.setIdade(idade);
@@ -79,10 +99,6 @@ public class AnimalService {
         animal.setMensalidadeSugerida(req.mensalidadeSugerida());
         animal.setNecessidades(validarNecessidades(req.necessidades()));
         animal.setFotoUrl(validarFoto(req.fotoUrl()));
-        if (req.status() != null) {
-            animal.setStatus(req.status());
-        }
-        return toResponse(animalRepository.save(animal));
     }
 
     @Transactional

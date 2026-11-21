@@ -19,6 +19,7 @@ const PERFIL_DOADOR = {
 };
 
 let abaAtiva = 'animais';
+let animalEmEdicao = null;
 
 export async function renderAdm(app) {
   const [ong, animais, doacoes] = await Promise.all([
@@ -36,7 +37,7 @@ export async function renderAdm(app) {
     </div>
 
     <nav class="tabs">
-      ${Object.keys(ROTULOS_ABA).map((aba) => `<button class="tab" type="button" data-aba="${aba}">${ROTULOS_ABA[aba]}</button>`).join('')}
+      ${Object.keys(ROTULOS_ABA).map((aba) => `<button class="tab" type="button" data-aba="${aba}">${aba === 'novo' && animalEmEdicao ? 'Editar animal' : ROTULOS_ABA[aba]}</button>`).join('')}
     </nav>
 
     <section id="aba-conteudo"></section>`;
@@ -51,7 +52,13 @@ export async function renderAdm(app) {
     renderAba(conteudo, aba, contexto);
   };
 
-  abas.forEach((botao) => botao.addEventListener('click', () => ativar(botao.dataset.aba)));
+  abas.forEach((botao) => botao.addEventListener('click', () => {
+    if (animalEmEdicao) {
+      animalEmEdicao = null;
+      abas.find((item) => item.dataset.aba === 'novo').textContent = ROTULOS_ABA.novo;
+    }
+    ativar(botao.dataset.aba);
+  }));
   ativar(abaAtiva);
 }
 
@@ -73,10 +80,11 @@ function renderAnimais(container, contexto) {
   container.innerHTML = `<div class="grid">${animais.map((animal) => animalCard(animal, {
     acoes: `
       <button class="btn btn-sm btn-ghost" type="button" data-ver="${esc(animal.id)}">Ver doações</button>
+      <button class="btn btn-sm btn-ghost" type="button" data-editar="${esc(animal.id)}">Editar</button>
       ${animal.status === 'ATIVO'
         ? `<button class="btn btn-sm ${animal.metaAtingida ? 'btn-danger' : 'btn-disabled'}" type="button"
                   data-inativar="${esc(animal.id)}" ${animal.metaAtingida ? '' : 'disabled title="Disponível quando a meta for atingida"'}>Inativar</button>`
-        : '<span class="badge badge-muted">Inativado</span>'}`
+        : `<button class="btn btn-sm btn-primary" type="button" data-reativar="${esc(animal.id)}">Reativar</button>`}`
   })).join('')}</div>`;
 
   container.querySelectorAll('[data-ver]').forEach((botao) => {
@@ -91,6 +99,39 @@ function renderAnimais(container, contexto) {
           ? tabelaDoacoes(doacoesDoAnimal)
           : '<div class="empty-state"><p>Nenhuma doação registrada para este animal.</p></div>'
       });
+    });
+  });
+
+  container.querySelectorAll('[data-editar]').forEach((botao) => {
+    botao.addEventListener('click', async () => {
+      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.editar));
+      if (!animal) return;
+      animalEmEdicao = animal;
+      abaAtiva = 'novo';
+      await renderAdm(contexto.app);
+    });
+  });
+
+  container.querySelectorAll('[data-reativar]').forEach((botao) => {
+    botao.addEventListener('click', async () => {
+      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.reativar));
+      if (!animal) return;
+      const confirmou = await confirmar({
+        titulo: 'Reativar animal',
+        mensagem: `Reativar ${animal.nome}? Ele voltará a aparecer para novas doações.`,
+        textoConfirmar: 'Reativar'
+      });
+      if (!confirmou) return;
+
+      try {
+        await api.reativarAnimal(animal.id);
+        toast(animal.metaAtingida
+          ? `${animal.nome} foi reativado, mas a meta já foi atingida. Use Editar para aumentar a meta.`
+          : `${animal.nome} foi reativado.`);
+        await renderAdm(contexto.app);
+      } catch (erro) {
+        toast(erro.message, 'erro');
+      }
     });
   });
 
@@ -118,64 +159,103 @@ function renderAnimais(container, contexto) {
 }
 
 function renderNovoAnimal(container, contexto) {
+  const animal = animalEmEdicao;
+
   container.innerHTML = `
     <form class="card form" id="form-animal">
+      ${animal ? `<p class="muted">Editando <strong>${esc(animal.nome)}</strong>. Altere o que precisar e salve.</p>` : ''}
       <div class="form-grid">
-        <label class="field"><span>Nome</span><input name="nome" required maxlength="60" placeholder="Ex.: Mel"></label>
-        <label class="field"><span>Espécie</span><input name="especie" required maxlength="40" placeholder="Cachorro, Gato..."></label>
-        <label class="field"><span>Idade</span><input name="idade" maxlength="30" placeholder="Ex.: 3 anos"></label>
-        <label class="field"><span>Meta de arrecadação (R$)</span><input name="meta" type="number" min="1" step="0.01" required placeholder="1200"></label>
-        <label class="field full"><span>Descrição</span><textarea name="descricao" required placeholder="História e situação do animal"></textarea></label>
-        <label class="field full"><span>Necessidades (separadas por vírgula)</span><input name="necessidades" placeholder="Ração, consultas, castração"></label>
+        <label class="field"><span>Nome</span><input name="nome" required maxlength="60" placeholder="Ex.: Mel" value="${esc(animal ? animal.nome : '')}"></label>
+        <label class="field"><span>Espécie</span><input name="especie" required maxlength="40" placeholder="Cachorro, Gato..." value="${esc(animal ? animal.especie : '')}"></label>
+        <label class="field"><span>Idade</span><input name="idade" maxlength="30" placeholder="Ex.: 3 anos" value="${esc(animal && animal.idade ? animal.idade : '')}"></label>
+        <label class="field"><span>Meta de arrecadação (R$)</span><input name="meta" type="number" min="1" step="0.01" required placeholder="1200" value="${esc(animal ? animal.meta : '')}"></label>
+        <label class="field full"><span>Descrição</span><textarea name="descricao" required placeholder="História e situação do animal">${esc(animal ? animal.descricao : '')}</textarea></label>
+        <label class="field full"><span>Necessidades (separadas por vírgula)</span><input name="necessidades" placeholder="Ração, consultas, castração" value="${esc(animal ? (animal.necessidades || []).join(', ') : '')}"></label>
         <label class="field full"><span>Foto do animal (opcional)</span><input name="foto" type="file" accept="image/*"></label>
         <div class="field full">
           <img id="previa-foto" class="animal-photo animal-photo-preview" alt="Prévia da foto" hidden>
+          <div><button class="btn btn-sm btn-ghost" type="button" id="remover-foto" hidden>Remover foto</button></div>
         </div>
       </div>
       <div class="form-actions">
-        <button class="btn btn-primary" type="submit">Cadastrar animal</button>
+        <button class="btn btn-primary" type="submit">${animal ? 'Salvar alterações' : 'Cadastrar animal'}</button>
+        ${animal ? '<button class="btn btn-ghost" type="button" id="cancelar-edicao">Cancelar</button>' : ''}
       </div>
     </form>`;
 
-  let fotoUrl = null;
+  let fotoUrl = animal && animal.fotoUrl ? animal.fotoUrl : null;
   const campoFoto = container.querySelector('input[name="foto"]');
   const previaFoto = container.querySelector('#previa-foto');
+  const botaoRemoverFoto = container.querySelector('#remover-foto');
+
+  const mostrarPrevia = () => {
+    if (fotoUrl) {
+      previaFoto.src = fotoUrl;
+      previaFoto.hidden = false;
+      botaoRemoverFoto.hidden = false;
+    } else {
+      previaFoto.removeAttribute('src');
+      previaFoto.hidden = true;
+      botaoRemoverFoto.hidden = true;
+    }
+  };
+  mostrarPrevia();
 
   campoFoto.addEventListener('change', async () => {
     const arquivo = campoFoto.files[0];
-    fotoUrl = null;
-    previaFoto.hidden = true;
     if (!arquivo) return;
 
     try {
       fotoUrl = await lerImagemRedimensionada(arquivo);
-      previaFoto.src = fotoUrl;
-      previaFoto.hidden = false;
+      mostrarPrevia();
     } catch (erro) {
       campoFoto.value = '';
       toast(erro.message, 'erro');
     }
   });
 
+  botaoRemoverFoto.addEventListener('click', () => {
+    fotoUrl = null;
+    campoFoto.value = '';
+    mostrarPrevia();
+  });
+
+  const cancelar = container.querySelector('#cancelar-edicao');
+  if (cancelar) {
+    cancelar.addEventListener('click', async () => {
+      animalEmEdicao = null;
+      abaAtiva = 'animais';
+      await renderAdm(contexto.app);
+    });
+  }
+
   container.querySelector('#form-animal').addEventListener('submit', async (evento) => {
     evento.preventDefault();
     const dados = Object.fromEntries(new FormData(evento.target));
 
+    const payload = {
+      nome: dados.nome.trim(),
+      especie: dados.especie.trim(),
+      idade: String(dados.idade || '').trim() || 'Não informada',
+      descricao: dados.descricao.trim(),
+      meta: Number(dados.meta),
+      necessidades: String(dados.necessidades || '')
+        .split(',')
+        .map((item) => item.trim())
+        .filter(Boolean),
+      mensalidadeSugerida: animal && animal.mensalidadeSugerida != null ? animal.mensalidadeSugerida : 50,
+      fotoUrl
+    };
+
     try {
-      await api.criarAnimal({
-        nome: dados.nome.trim(),
-        especie: dados.especie.trim(),
-        idade: String(dados.idade || '').trim() || 'Não informada',
-        descricao: dados.descricao.trim(),
-        meta: Number(dados.meta),
-        necessidades: String(dados.necessidades || '')
-          .split(',')
-          .map((item) => item.trim())
-          .filter(Boolean),
-        mensalidadeSugerida: 50,
-        fotoUrl
-      });
-      toast('Animal cadastrado com sucesso.');
+      if (animal) {
+        await api.atualizarAnimal(animal.id, payload);
+        toast('Alterações salvas.');
+      } else {
+        await api.criarAnimal(payload);
+        toast('Animal cadastrado com sucesso.');
+      }
+      animalEmEdicao = null;
       abaAtiva = 'animais';
       await renderAdm(contexto.app);
     } catch (erro) {
