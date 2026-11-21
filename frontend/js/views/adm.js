@@ -18,8 +18,20 @@ const PERFIL_DOADOR = {
   PADRINHO: 'Padrinho'
 };
 
+const PERIODOS = {
+  tudo: 'Todo o período',
+  7: 'Últimos 7 dias',
+  30: 'Últimos 30 dias',
+  90: 'Últimos 90 dias',
+  mes: 'Este mês',
+  personalizado: 'Escolher datas'
+};
+
 let abaAtiva = 'animais';
 let animalEmEdicao = null;
+let filtroPeriodo = 'tudo';
+let filtroDe = '';
+let filtroAte = '';
 
 export async function renderAdm(app) {
   const [ong, animais, doacoes] = await Promise.all([
@@ -264,23 +276,85 @@ function renderNovoAnimal(container, contexto) {
   });
 }
 
+function filtrarPorPeriodo(doacoes) {
+  const agora = new Date();
+  let inicio = null;
+  let fim = null;
+
+  if (['7', '30', '90'].includes(String(filtroPeriodo))) {
+    inicio = new Date(agora);
+    inicio.setDate(inicio.getDate() - Number(filtroPeriodo));
+  } else if (filtroPeriodo === 'mes') {
+    inicio = new Date(agora.getFullYear(), agora.getMonth(), 1);
+  } else if (filtroPeriodo === 'personalizado') {
+    if (filtroDe) inicio = new Date(`${filtroDe}T00:00:00`);
+    if (filtroAte) fim = new Date(`${filtroAte}T23:59:59.999`);
+  }
+
+  return doacoes.filter((doacao) => {
+    const data = new Date(doacao.data);
+    if (inicio && data < inicio) return false;
+    if (fim && data > fim) return false;
+    return true;
+  });
+}
+
 function renderDoacoes(container, contexto) {
   const { doacoes, animais } = contexto;
-  const total = doacoes
+  const filtradas = filtrarPorPeriodo(doacoes);
+  const total = filtradas
     .filter((doacao) => doacao.status !== 'CANCELADA')
     .reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
   const ativos = animais.filter((animal) => animal.status === 'ATIVO').length;
   const mapaAnimais = new Map(animais.map((animal) => [String(animal.id), animal.nome]));
 
+  let listagem = tabelaDoacoes(filtradas, mapaAnimais);
+  if (!doacoes.length) {
+    listagem = '<div class="empty-state"><p>Nenhuma doação recebida ainda.</p></div>';
+  } else if (!filtradas.length) {
+    listagem = '<div class="empty-state"><p>Nenhuma doação neste período.</p></div>';
+  }
+
   container.innerHTML = `
+    <div class="card filtro-periodo">
+      <label class="field">
+        <span>Período</span>
+        <select id="filtro-periodo">
+          ${Object.entries(PERIODOS).map(([valor, rotulo]) => `<option value="${valor}" ${String(filtroPeriodo) === valor ? 'selected' : ''}>${rotulo}</option>`).join('')}
+        </select>
+      </label>
+      ${filtroPeriodo === 'personalizado' ? `
+        <label class="field"><span>De</span><input type="date" id="filtro-de" value="${esc(filtroDe)}"></label>
+        <label class="field"><span>Até</span><input type="date" id="filtro-ate" value="${esc(filtroAte)}"></label>` : ''}
+      <p class="muted filtro-resumo">Mostrando ${filtradas.length} de ${doacoes.length} doações</p>
+    </div>
     <div class="stats">
       <div class="stat"><div class="stat-label">Total recebido</div><div class="stat-value">${fmtMoeda(total)}</div></div>
-      <div class="stat"><div class="stat-label">Doações</div><div class="stat-value">${doacoes.length}</div></div>
+      <div class="stat"><div class="stat-label">Doações</div><div class="stat-value">${filtradas.length}</div></div>
       <div class="stat"><div class="stat-label">Animais ativos</div><div class="stat-value">${ativos}</div></div>
     </div>
-    ${doacoes.length
-      ? tabelaDoacoes(doacoes, mapaAnimais)
-      : '<div class="empty-state"><p>Nenhuma doação recebida ainda.</p></div>'}`;
+    ${listagem}`;
+
+  container.querySelector('#filtro-periodo').addEventListener('change', (evento) => {
+    filtroPeriodo = evento.target.value;
+    renderDoacoes(container, contexto);
+  });
+
+  const campoDe = container.querySelector('#filtro-de');
+  const campoAte = container.querySelector('#filtro-ate');
+  if (campoDe && campoAte) {
+    const atualizarDatas = () => {
+      filtroDe = campoDe.value;
+      filtroAte = campoAte.value;
+      if (filtroDe && filtroAte && filtroDe > filtroAte) {
+        toast('A data inicial não pode ser depois da data final.', 'erro');
+        return;
+      }
+      renderDoacoes(container, contexto);
+    };
+    campoDe.addEventListener('change', atualizarDatas);
+    campoAte.addEventListener('change', atualizarDatas);
+  }
 }
 
 function tabelaDoacoes(doacoes, mapaAnimais = null) {

@@ -901,3 +901,23 @@ body.modal-aberto {
   max-width: 320px;
   height: 200px;
 }
+
+
+/* ---------- Filtro por período (painel da ONG) ---------- */
+
+.filtro-periodo {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+  margin-bottom: 1rem;
+  padding: 1rem;
+}
+
+.filtro-periodo .field {
+  min-width: 180px;
+}
+
+.filtro-resumo {
+  margin: 0 0 0.5rem auto;
+}
