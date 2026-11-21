@@ -4,6 +4,7 @@ import {
   esc, fmtMoeda, fmtData, animalCard, abrirModal,
   toast, confirmar
 } from '../components.js';
+import { lerImagemRedimensionada } from '../imagem.js';
 
 const ROTULOS_ABA = {
   animais: 'Animais',
@@ -126,11 +127,35 @@ function renderNovoAnimal(container, contexto) {
         <label class="field"><span>Meta de arrecadação (R$)</span><input name="meta" type="number" min="1" step="0.01" required placeholder="1200"></label>
         <label class="field full"><span>Descrição</span><textarea name="descricao" required placeholder="História e situação do animal"></textarea></label>
         <label class="field full"><span>Necessidades (separadas por vírgula)</span><input name="necessidades" placeholder="Ração, consultas, castração"></label>
+        <label class="field full"><span>Foto do animal (opcional)</span><input name="foto" type="file" accept="image/*"></label>
+        <div class="field full">
+          <img id="previa-foto" class="animal-photo animal-photo-preview" alt="Prévia da foto" hidden>
+        </div>
       </div>
       <div class="form-actions">
         <button class="btn btn-primary" type="submit">Cadastrar animal</button>
       </div>
     </form>`;
+
+  let fotoUrl = null;
+  const campoFoto = container.querySelector('input[name="foto"]');
+  const previaFoto = container.querySelector('#previa-foto');
+
+  campoFoto.addEventListener('change', async () => {
+    const arquivo = campoFoto.files[0];
+    fotoUrl = null;
+    previaFoto.hidden = true;
+    if (!arquivo) return;
+
+    try {
+      fotoUrl = await lerImagemRedimensionada(arquivo);
+      previaFoto.src = fotoUrl;
+      previaFoto.hidden = false;
+    } catch (erro) {
+      campoFoto.value = '';
+      toast(erro.message, 'erro');
+    }
+  });
 
   container.querySelector('#form-animal').addEventListener('submit', async (evento) => {
     evento.preventDefault();
@@ -147,7 +172,8 @@ function renderNovoAnimal(container, contexto) {
           .split(',')
           .map((item) => item.trim())
           .filter(Boolean),
-        mensalidadeSugerida: 50
+        mensalidadeSugerida: 50,
+        fotoUrl
       });
       toast('Animal cadastrado com sucesso.');
       abaAtiva = 'animais';

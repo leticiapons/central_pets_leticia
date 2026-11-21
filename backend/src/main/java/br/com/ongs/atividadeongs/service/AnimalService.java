@@ -28,6 +28,7 @@ public class AnimalService {
     private static final int TAMANHO_MAXIMO_ESPECIE = 40;
     private static final int TAMANHO_MAXIMO_IDADE = 30;
     private static final int TAMANHO_MAXIMO_NECESSIDADE = 120;
+    private static final int TAMANHO_MAXIMO_FOTO = 1_500_000;
 
     private final AnimalRepository animalRepository;
     private final DoacaoRepository doacaoRepository;
@@ -77,6 +78,7 @@ public class AnimalService {
         animal.setMeta(req.meta());
         animal.setMensalidadeSugerida(req.mensalidadeSugerida());
         animal.setNecessidades(validarNecessidades(req.necessidades()));
+        animal.setFotoUrl(validarFoto(req.fotoUrl()));
         if (req.status() != null) {
             animal.setStatus(req.status());
         }
@@ -172,6 +174,24 @@ public class AnimalService {
         return texto;
     }
 
+    private String validarFoto(String foto) {
+        String texto = foto == null ? "" : foto.trim();
+        if (texto.isEmpty()) {
+            return null;
+        }
+        if (texto.length() > TAMANHO_MAXIMO_FOTO) {
+            throw new IllegalArgumentException("A foto é grande demais. Escolha uma imagem menor.");
+        }
+        boolean formatoValido = texto.startsWith("data:image/")
+                || texto.startsWith("http://")
+                || texto.startsWith("https://")
+                || texto.startsWith("img/");
+        if (!formatoValido) {
+            throw new IllegalArgumentException("A foto deve ser uma imagem válida.");
+        }
+        return texto;
+    }
+
     private List<String> validarNecessidades(List<String> necessidades) {
         List<String> normalizadas = new ArrayList<>();
 
@@ -211,6 +231,6 @@ public class AnimalService {
                 a.getId(), a.getNome(), a.getEspecie(), a.getIdade(), a.getDescricao(),
                 a.getStatus(), meta, new ArrayList<>(a.getNecessidades()),
                 padrinhoIds, a.getMensalidadeSugerida(),
-                arrecadado, percentual, atingida);
+                arrecadado, percentual, atingida, a.getFotoUrl());
     }
 }

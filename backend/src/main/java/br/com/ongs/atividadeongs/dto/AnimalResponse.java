@@ -18,5 +18,6 @@ public record AnimalResponse(
         BigDecimal mensalidadeSugerida,
         BigDecimal arrecadado,
         int percentual,
-        boolean metaAtingida) {
+        boolean metaAtingida,
+        String fotoUrl) {
 }

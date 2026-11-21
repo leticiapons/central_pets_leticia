@@ -13,5 +13,6 @@ public record AnimalRequest(
         BigDecimal meta,
         List<String> necessidades,
         BigDecimal mensalidadeSugerida,
-        StatusAnimal status) {
+        StatusAnimal status,
+        String fotoUrl) {
 }

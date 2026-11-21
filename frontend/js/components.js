@@ -52,9 +52,15 @@ export function barraProgresso(animal) {
     </div>`;
 }
 
+export function fotoAnimal(animal, classe = '') {
+  if (!animal.fotoUrl) return '';
+  return `<img class="animal-photo ${classe}" src="${esc(animal.fotoUrl)}" alt="Foto de ${esc(animal.nome)}" loading="lazy" onerror="this.remove()">`;
+}
+
 export function animalCard(animal, { acoes = '' } = {}) {
   return `
     <article class="card animal-card">
+      ${fotoAnimal(animal)}
       <div class="animal-top">
         <div class="animal-avatar">${iniciais(animal.nome)}</div>
         <div class="animal-id">

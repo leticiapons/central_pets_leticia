@@ -1,5 +1,5 @@
 import * as api from './api.js';
-import { abrirModal, fecharModal, esc, fmtMoeda, toast } from './components.js';
+import { abrirModal, fecharModal, esc, fmtMoeda, toast, fotoAnimal } from './components.js';
 
 const VALORES_RAPIDOS = [20, 50, 100, 200];
 
@@ -14,6 +14,7 @@ export function abrirDoacao({ animal, ong, perfil, doador = null, valorSugerido 
     conteudo: `
       <div class="donation-detail">
         <div>
+          ${fotoAnimal(animal, 'animal-photo-lg')}
           <p class="muted">${esc(animal.especie)} · ${esc(animal.idade)}</p>
           <p>${esc(animal.descricao)}</p>
           ${necessidades ? `<div class="needs"><h4>Necessidades</h4><ul class="needs-list">${necessidades}</ul></div>` : ''}

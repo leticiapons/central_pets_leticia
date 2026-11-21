@@ -57,6 +57,11 @@ public class Animal {
     @Column(name = "mensalidade_sugerida", precision = 12, scale = 2)
     private BigDecimal mensalidadeSugerida;
 
+    // Foto do animal: caminho de uma imagem (ex.: img/animais/mel.svg), endereço http(s)
+    // ou a própria imagem codificada (data:image/...) quando enviada pelo painel da ONG.
+    @Column(name = "foto_url", columnDefinition = "TEXT")
+    private String fotoUrl;
+
 
     @ManyToMany
     @JoinTable(
@@ -139,6 +144,14 @@ public class Animal {
 
     public void setMensalidadeSugerida(BigDecimal mensalidadeSugerida) {
         this.mensalidadeSugerida = mensalidadeSugerida;
+    }
+
+    public String getFotoUrl() {
+        return fotoUrl;
+    }
+
+    public void setFotoUrl(String fotoUrl) {
+        this.fotoUrl = fotoUrl;
     }
 
     public Set<Usuario> getPadrinhos() {
