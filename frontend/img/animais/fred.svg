@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 400 300" width="400" height="300">
+  <defs>
+    <linearGradient id="fundo" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#dff0e4"/>
+      <stop offset="1" stop-color="#a8d3b4"/>
+    </linearGradient>
+  </defs>
+  <rect width="400" height="300" fill="url(#fundo)"/>
+  <circle cx="60" cy="50" r="90" fill="#ffffff" fill-opacity="0.25"/>
+  <circle cx="360" cy="270" r="110" fill="#ffffff" fill-opacity="0.2"/>
+  <text x="200" y="175" font-size="130" text-anchor="middle" font-family="Segoe UI Emoji, Apple Color Emoji, Noto Color Emoji, sans-serif">🐶</text>
+  <text x="200" y="278" font-size="14" text-anchor="middle" fill="#1d2a23" fill-opacity="0.55" font-family="Segoe UI, Arial, sans-serif">Imagem ilustrativa (protótipo)</text>
+</svg>

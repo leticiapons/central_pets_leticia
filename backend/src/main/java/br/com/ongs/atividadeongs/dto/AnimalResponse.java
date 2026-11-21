@@ -19,5 +19,7 @@ public record AnimalResponse(
         BigDecimal arrecadado,
         int percentual,
         boolean metaAtingida,
-        String fotoUrl) {
+        String fotoUrl,
+        Long ongId,
+        String ongNome) {
 }

@@ -66,6 +66,7 @@ export function animalCard(animal, { acoes = '' } = {}) {
         <div class="animal-id">
           <h3>${esc(animal.nome)}</h3>
           <p class="muted">${esc(animal.especie)} · ${esc(animal.idade)}</p>
+          ${animal.ongNome ? `<p class="muted small animal-ong">${esc(animal.ongNome)}</p>` : ''}
         </div>
         ${statusBadge(animal.status)}
       </div>

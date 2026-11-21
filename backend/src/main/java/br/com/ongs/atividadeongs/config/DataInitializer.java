@@ -12,6 +12,7 @@ import br.com.ongs.atividadeongs.repository.AnimalRepository;
 import br.com.ongs.atividadeongs.repository.DoacaoRepository;
 import br.com.ongs.atividadeongs.repository.OngRepository;
 import br.com.ongs.atividadeongs.repository.UsuarioRepository;
+import br.com.ongs.atividadeongs.service.SenhaService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.boot.CommandLineRunner;
@@ -35,33 +36,48 @@ public class DataInitializer implements CommandLineRunner {
     private static final Logger log = LoggerFactory.getLogger(DataInitializer.class);
 
     private static final String PADRINHO_EMAIL = "carlos.andrade@example.com";
+    private static final String PADRINHO_EMAIL_ANTIGO = "carlos.andrade@email.com";
+    private static final String ADM_EMAIL = "ong@example.com";
+    private static final String DOADOR_EMAIL = "doador@example.com";
+    private static final String ABRIGO_EMAIL = "abrigo@example.com";
+    private static final String PROTETORA_EMAIL = "maria@example.com";
+
+    // Senha FICTÍCIA, igual para todas as contas de exemplo (só para demonstração).
+    private static final String SENHA_EXEMPLO = "exemplo123";
 
     private final OngRepository ongRepository;
     private final UsuarioRepository usuarioRepository;
     private final AnimalRepository animalRepository;
     private final DoacaoRepository doacaoRepository;
+    private final SenhaService senhaService;
 
     public DataInitializer(OngRepository ongRepository,
                            UsuarioRepository usuarioRepository,
                            AnimalRepository animalRepository,
-                           DoacaoRepository doacaoRepository) {
+                           DoacaoRepository doacaoRepository,
+                           SenhaService senhaService) {
         this.ongRepository = ongRepository;
         this.usuarioRepository = usuarioRepository;
         this.animalRepository = animalRepository;
         this.doacaoRepository = doacaoRepository;
+        this.senhaService = senhaService;
     }
 
     @Override
     @Transactional
     public void run(String... args) {
-        criarOngPadraoSeNecessario();
+        Ong patasFelizes = criarOngPadraoSeNecessario();
         criarPadrinhoPadraoSeNecessario();
-        criarAnimaisDeExemploSeNecessario();
+        criarAnimaisDeExemploSeNecessario(patasFelizes);
+        vincularAnimaisSemOng(patasFelizes);
+        criarOngsExtrasDeExemplo();
+        garantirContasDeExemplo(patasFelizes);
     }
 
-    private void criarOngPadraoSeNecessario() {
-        if (ongRepository.findFirstByOrderByIdAsc().isPresent()) {
-            return;
+    private Ong criarOngPadraoSeNecessario() {
+        Ong existente = ongRepository.findFirstByOrderByIdAsc().orElse(null);
+        if (existente != null) {
+            return existente;
         }
 
         Ong ong = new Ong();
@@ -71,9 +87,10 @@ public class DataInitializer implements CommandLineRunner {
         ong.setTipoChavePix(TipoChavePix.EMAIL);
         ong.setTelefone("(00) 00000-0000");
         ong.setEndereco("Rua dos Bichinhos, 120 - Cidade Exemplo");
-        ongRepository.save(ong);
+        ong = ongRepository.save(ong);
 
         log.info("ONG padrão criada para o protótipo.");
+        return ong;
     }
 
     private void criarPadrinhoPadraoSeNecessario() {
@@ -94,7 +111,131 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Padrinho padrão criado para o protótipo.");
     }
 
-    private void criarAnimaisDeExemploSeNecessario() {
+    /**
+     * Garante as contas fictícias para entrar no site (ONG, doador e padrinho) e dá a
+     * senha de exemplo às contas antigas que foram criadas antes de existir login.
+     */
+    private void garantirContasDeExemplo(Ong patasFelizes) {
+        usuarioRepository.findByEmailIgnoreCase(PADRINHO_EMAIL_ANTIGO).ifPresent(antigo -> {
+            if (usuarioRepository.findByEmailIgnoreCase(PADRINHO_EMAIL).isEmpty()) {
+                antigo.setEmail(PADRINHO_EMAIL);
+                usuarioRepository.save(antigo);
+            }
+        });
+
+        contaDeExemplo("Responsável pela Patas Felizes", ADM_EMAIL, PerfilUsuario.ADM, patasFelizes);
+        contaDeExemplo("Doador Exemplo", DOADOR_EMAIL, PerfilUsuario.USUARIO, null);
+
+        for (Usuario usuario : usuarioRepository.findAll()) {
+            if (usuario.getSenhaHash() == null) {
+                usuario.setSenhaHash(senhaService.gerarHash(SENHA_EXEMPLO));
+                usuarioRepository.save(usuario);
+                log.info("Senha de exemplo definida para a conta {}.", usuario.getEmail());
+            }
+        }
+    }
+
+    /** Cria a conta de exemplo se não existir e, se faltar, liga a conta à sua ONG. */
+    private Usuario contaDeExemplo(String nome, String email, PerfilUsuario perfil, Ong ong) {
+        Usuario usuario = usuarioRepository.findByEmailIgnoreCase(email).orElse(null);
+
+        if (usuario == null) {
+            usuario = new Usuario();
+            usuario.setNome(nome);
+            usuario.setEmail(email);
+            usuario.setPerfil(perfil);
+            usuario.setSenhaHash(senhaService.gerarHash(SENHA_EXEMPLO));
+            usuario.setOng(ong);
+            usuario = usuarioRepository.save(usuario);
+            log.info("Conta de exemplo criada: {}.", email);
+        } else if (ong != null && usuario.getOng() == null) {
+            usuario.setOng(ong);
+            usuario = usuarioRepository.save(usuario);
+        }
+        return usuario;
+    }
+
+    /** Animais criados antes de existirem várias ONGs passam a pertencer à ONG padrão. */
+    private void vincularAnimaisSemOng(Ong patasFelizes) {
+        for (Animal animal : animalRepository.findAll()) {
+            if (animal.getOng() == null) {
+                animal.setOng(patasFelizes);
+                animalRepository.save(animal);
+            }
+        }
+    }
+
+    /**
+     * Cria duas campanhas fictícias extras (um abrigo e uma protetora independente)
+     * para mostrar o site com várias ONGs. Só roda se as contas ainda não existirem.
+     */
+    private void criarOngsExtrasDeExemplo() {
+        if (usuarioRepository.findByEmailIgnoreCase(ABRIGO_EMAIL).isEmpty()) {
+            Ong abrigo = criarOng("Abrigo Cantinho do Gato",
+                    "Abrigo fictício que acolhe gatos resgatados das ruas e cuida deles até a adoção.",
+                    "pix.cantinho@example.com", TipoChavePix.EMAIL,
+                    "(00) 00000-0001", "Rua das Mangueiras, 45 - Cidade Exemplo");
+            contaDeExemplo("Responsável pelo Cantinho do Gato", ABRIGO_EMAIL, PerfilUsuario.ADM, abrigo);
+
+            Animal frajola = criarAnimal(abrigo, "Frajola", "Gato", "3 anos",
+                    "Frajola é um gato preto e branco, muito falante. Foi resgatado com uma infecção no ouvido e está em tratamento.",
+                    "800.00", "35.00", StatusAnimal.ATIVO, "img/animais/frajola.svg",
+                    List.of("Antibióticos", "Consultas veterinárias"));
+            Animal mingau = criarAnimal(abrigo, "Mingau", "Gato", "8 meses",
+                    "Mingau é um filhote branquinho e brincalhão, encontrado em uma caixa na chuva. Precisa de vacinas e castração.",
+                    "650.00", "30.00", StatusAnimal.ATIVO, "img/animais/mingau.svg",
+                    List.of("Vacinas", "Castração", "Ração para filhotes"));
+            Animal tigrado = criarAnimal(abrigo, "Tigrado", "Gato", "6 anos",
+                    "Tigrado é um senhor tranquilo, que gosta de dormir ao sol. Precisa de ração especial para os rins.",
+                    "1200.00", "50.00", StatusAnimal.ATIVO, "img/animais/tigrado.svg",
+                    List.of("Ração renal", "Exames de rotina"));
+
+            doar(frajola, PerfilUsuario.USUARIO, null, "Letícia Fonseca", "120.00", 4);
+            doar(frajola, PerfilUsuario.USUARIO, null, "Marcos Vieira", "60.00", 18);
+            doar(mingau, PerfilUsuario.USUARIO, null, "Natália Cruz", "90.00", 7);
+            doar(tigrado, PerfilUsuario.USUARIO, null, "Otávio Ramos", "200.00", 25);
+        }
+
+        if (usuarioRepository.findByEmailIgnoreCase(PROTETORA_EMAIL).isEmpty()) {
+            Ong protetora = criarOng("Maria Souza, protetora independente",
+                    "Protetora independente fictícia que cuida de cães resgatados em sua casa, com a ajuda de vizinhos.",
+                    "(00) 90000-0002", TipoChavePix.TELEFONE,
+                    "(00) 90000-0002", "Bairro Jardim Exemplo");
+            contaDeExemplo("Maria Souza", PROTETORA_EMAIL, PerfilUsuario.ADM, protetora);
+
+            Animal caramelo = criarAnimal(protetora, "Caramelo", "Cachorro", "2 anos",
+                    "Caramelo foi atropelado e salvo por vizinhos. Já se recuperou da cirurgia e agora precisa de fisioterapia e ração.",
+                    "950.00", "40.00", StatusAnimal.ATIVO, "img/animais/caramelo.svg",
+                    List.of("Fisioterapia", "Ração"));
+            Animal fred = criarAnimal(protetora, "Fred", "Cachorro", "4 anos",
+                    "Fred é um cachorro de porte médio, muito leal. Precisa tratar uma sarna e fazer a castração.",
+                    "700.00", "30.00", StatusAnimal.ATIVO, "img/animais/fred.svg",
+                    List.of("Tratamento de pele", "Castração"));
+            Animal pretinha = criarAnimal(protetora, "Pretinha", "Cachorro", "10 anos",
+                    "Pretinha é uma senhorinha doce, que vive com a protetora desde filhote. Precisa de remédios para as articulações.",
+                    "1000.00", "45.00", StatusAnimal.ATIVO, "img/animais/pretinha.svg",
+                    List.of("Anti-inflamatórios", "Suplementos"));
+
+            doar(caramelo, PerfilUsuario.USUARIO, null, "Paula Teixeira", "150.00", 3);
+            doar(caramelo, PerfilUsuario.USUARIO, null, "Rafael Duarte", "80.00", 21);
+            doar(fred, PerfilUsuario.USUARIO, null, "Sara Medeiros", "100.00", 11);
+            doar(pretinha, PerfilUsuario.USUARIO, null, "Tiago Barros", "300.00", 30);
+        }
+    }
+
+    private Ong criarOng(String nome, String descricao, String chavePix, TipoChavePix tipo,
+                         String telefone, String endereco) {
+        Ong ong = new Ong();
+        ong.setNome(nome);
+        ong.setDescricao(descricao);
+        ong.setChavePix(chavePix);
+        ong.setTipoChavePix(tipo);
+        ong.setTelefone(telefone);
+        ong.setEndereco(endereco);
+        return ongRepository.save(ong);
+    }
+
+    private void criarAnimaisDeExemploSeNecessario(Ong patasFelizes) {
         if (animalRepository.count() > 0) {
             return;
         }
@@ -103,42 +244,42 @@ public class DataInitializer implements CommandLineRunner {
                 .findFirst()
                 .orElse(null);
 
-        Animal mel = criarAnimal("Mel", "Cachorro", "3 anos",
+        Animal mel = criarAnimal(patasFelizes, "Mel", "Cachorro", "3 anos",
                 "Mel foi resgatada de uma casa abandonada. É carinhosa, adora brincar de bolinha e se dá bem com crianças. Precisa de tratamento contra carrapatos e de castração.",
                 "1500.00", "60.00", StatusAnimal.ATIVO, "img/animais/mel.svg",
                 List.of("Ração", "Tratamento contra carrapatos", "Castração"));
 
-        Animal thor = criarAnimal("Thor", "Cachorro", "5 anos",
+        Animal thor = criarAnimal(patasFelizes, "Thor", "Cachorro", "5 anos",
                 "Thor é um cachorro grande e muito dócil, encontrado vagando perto de uma estrada. Está se recuperando de uma cirurgia na pata e precisa de fisioterapia.",
                 "2200.00", "80.00", StatusAnimal.ATIVO, "img/animais/thor.svg",
                 List.of("Fisioterapia", "Medicamentos", "Ração"));
 
-        Animal luna = criarAnimal("Luna", "Gato", "2 anos",
+        Animal luna = criarAnimal(patasFelizes, "Luna", "Gato", "2 anos",
                 "Luna é uma gata tímida e muito esperta. Foi encontrada em uma caixa de papelão e já está vacinada. Procura um lar tranquilo e padrinhos para ajudar nos cuidados.",
                 "900.00", "40.00", StatusAnimal.ATIVO, "img/animais/luna.svg",
                 List.of("Ração", "Areia higiênica", "Vermifugação"));
 
-        Animal mimi = criarAnimal("Mimi", "Gato", "1 ano",
+        Animal mimi = criarAnimal(patasFelizes, "Mimi", "Gato", "1 ano",
                 "Mimi é uma gatinha brincalhona e cheia de energia. Precisa fazer exames e castração antes de ser encaminhada para adoção.",
                 "700.00", "35.00", StatusAnimal.ATIVO, "img/animais/mimi.svg",
                 List.of("Exames", "Castração"));
 
-        Animal bob = criarAnimal("Bob", "Cachorro", "8 anos",
+        Animal bob = criarAnimal(patasFelizes, "Bob", "Cachorro", "8 anos",
                 "Bob é um senhorzinho calmo e companheiro. Teve a meta de tratamento dentário atingida e está inativo por enquanto, aguardando um novo lar.",
                 "600.00", "50.00", StatusAnimal.INATIVO, "img/animais/bob.svg",
                 List.of("Tratamento dentário"));
 
-        Animal nina = criarAnimal("Nina", "Cachorro", "6 meses",
+        Animal nina = criarAnimal(patasFelizes, "Nina", "Cachorro", "6 meses",
                 "Nina é uma filhote curiosa, resgatada junto com os irmãos. Precisa completar o ciclo de vacinas e de ração para filhotes.",
                 "1100.00", "45.00", StatusAnimal.ATIVO, "img/animais/nina.svg",
                 List.of("Vacinas", "Ração para filhotes", "Vermífugo"));
 
-        Animal simba = criarAnimal("Simba", "Gato", "4 anos",
+        Animal simba = criarAnimal(patasFelizes, "Simba", "Gato", "4 anos",
                 "Simba é um gato laranja, muito sociável, que vivia em uma praça. Precisa de tratamento para uma alergia de pele.",
                 "1300.00", "55.00", StatusAnimal.ATIVO, "img/animais/simba.svg",
                 List.of("Consultas veterinárias", "Medicamentos", "Ração"));
 
-        Animal pipoca = criarAnimal("Pipoca", "Coelho", "1 ano",
+        Animal pipoca = criarAnimal(patasFelizes, "Pipoca", "Coelho", "1 ano",
                 "Pipoca é uma coelhinha mansa, entregue à ONG após o dono se mudar. Precisa de feno, verduras frescas e um recinto maior.",
                 "500.00", "30.00", StatusAnimal.ATIVO, "img/animais/pipoca.svg",
                 List.of("Feno", "Recinto maior", "Verduras"));
@@ -173,10 +314,11 @@ public class DataInitializer implements CommandLineRunner {
         log.info("Animais e doações fictícios criados para o protótipo.");
     }
 
-    private Animal criarAnimal(String nome, String especie, String idade, String descricao,
+    private Animal criarAnimal(Ong ong, String nome, String especie, String idade, String descricao,
                                String meta, String mensalidade, StatusAnimal status,
                                String fotoUrl, List<String> necessidades) {
         Animal animal = new Animal();
+        animal.setOng(ong);
         animal.setNome(nome);
         animal.setEspecie(especie);
         animal.setIdade(idade);

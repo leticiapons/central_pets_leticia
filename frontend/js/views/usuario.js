@@ -1,13 +1,15 @@
 import * as api from '../api.js';
-import { esc, animalCard } from '../components.js';
+import { esc, animalCard, toast } from '../components.js';
 import { abrirDoacao } from '../doacao-modal.js';
 import { mesmoId } from '../ids.js';
+import { getUsuarioLogado } from '../state.js';
 
 export async function renderUsuario(app) {
-  const [ong, animais] = await Promise.all([
-    api.getOng(),
+  const [ongs, animais] = await Promise.all([
+    api.listarOngs(),
     api.listarAnimais({ status: 'ATIVO' })
   ]);
+  const mapaOngs = new Map(ongs.map((ong) => [String(ong.id), ong]));
 
   const resumo = animais.length
     ? `${animais.length} ${animais.length === 1 ? 'animal precisa' : 'animais precisam'} de ajuda.`
@@ -33,10 +35,16 @@ export async function renderUsuario(app) {
     botao.addEventListener('click', () => {
       const animal = animais.find((item) => mesmoId(item.id, botao.dataset.doar));
       if (!animal) return;
+      const ong = mapaOngs.get(String(animal.ongId));
+      if (!ong) {
+        toast('Não foi possível encontrar os dados de pagamento desta ONG.', 'erro');
+        return;
+      }
       abrirDoacao({
         animal,
         ong,
         perfil: 'USUARIO',
+        doador: getUsuarioLogado(),
         aoConcluir: () => renderUsuario(app)
       });
     });

@@ -41,6 +41,16 @@ public class DoacaoService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<DoacaoResponse> listarPorOng(Long ongId) {
+        return doacaoRepository.findAll()
+                .stream()
+                .filter(d -> d.getAnimal().getOng() != null
+                        && Objects.equals(d.getAnimal().getOng().getId(), ongId))
+                .map(this::toResponse)
+                .toList();
+    }
+
     @Transactional
     public DoacaoResponse criar(DoacaoRequest dados) {
         if (dados.animalId() == null) {

@@ -1,18 +1,18 @@
 import * as api from './api.js';
-import { getPerfil, limparPerfil, PERFIS } from './state.js';
+import { getPerfil, getUsuarioLogado, limparSessao, PERFIS } from './state.js';
 import { esc } from './components.js';
-import { renderPerfil } from './views/perfil.js';
+import { renderLogin } from './views/login.js';
 import { renderAdm } from './views/adm.js';
 import { renderUsuario } from './views/usuario.js';
 import { renderPadrinho } from './views/padrinho.js';
 
 const app = document.getElementById('app');
-const nomeOng = document.getElementById('ong-nome');
 const perfilBadge = document.getElementById('perfil-badge');
-const trocarPerfil = document.getElementById('trocar-perfil');
+const botaoSair = document.getElementById('sair');
+const nomeUsuario = document.getElementById('usuario-nome');
 
 const ROTAS = {
-  '': { perfil: null, render: renderPerfil },
+  '': { perfil: null, render: renderLogin },
   adm: { perfil: 'ADM', render: renderAdm },
   usuario: { perfil: 'USUARIO', render: renderUsuario },
   padrinho: { perfil: 'PADRINHO', render: renderPadrinho }
@@ -26,13 +26,17 @@ function rotaDoPerfil(perfil) {
   return perfil ? perfil.toLowerCase() : '';
 }
 
-function atualizarHeader(rotaDePerfil) {
-  const perfil = getPerfil();
-  const perfilInfo = perfil ? PERFIS[perfil] : null;
-  const exibir = Boolean(perfilInfo && rotaDePerfil);
+function atualizarHeader() {
+  const usuario = getUsuarioLogado();
+  const perfilInfo = usuario ? PERFIS[usuario.perfil] : null;
+  const exibir = Boolean(perfilInfo);
   perfilBadge.hidden = !exibir;
-  trocarPerfil.hidden = !exibir;
-  if (exibir) perfilBadge.textContent = perfilInfo.label;
+  botaoSair.hidden = !exibir;
+  nomeUsuario.hidden = !exibir;
+  if (exibir) {
+    perfilBadge.textContent = perfilInfo.label;
+    nomeUsuario.textContent = usuario.ongNome || usuario.nome;
+  }
 }
 
 async function render() {
@@ -49,8 +53,12 @@ async function render() {
     location.hash = perfil ? `#/${rotaDoPerfil(perfil)}` : '#/';
     return;
   }
+  if (!destino.perfil && perfil) {
+    location.hash = `#/${rotaDoPerfil(perfil)}`;
+    return;
+  }
 
-  atualizarHeader(destino.perfil);
+  atualizarHeader();
   app.innerHTML = '<div class="loading">Carregando…</div>';
 
   try {
@@ -65,22 +73,16 @@ async function render() {
   }
 }
 
-trocarPerfil.addEventListener('click', (evento) => {
+botaoSair.addEventListener('click', async (evento) => {
   evento.preventDefault();
-  limparPerfil();
+  await api.sair();
+  limparSessao();
   location.hash = '#/';
 });
 
 window.addEventListener('hashchange', render);
 
 window.addEventListener('DOMContentLoaded', async () => {
-  try {
-    const ong = await api.getOng();
-    nomeOng.textContent = ong.nome;
-  } catch {
-    /* mantém o nome padrão */
-  }
-
   if (!location.hash) {
     location.hash = '#/';
     return;

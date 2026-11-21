@@ -12,6 +12,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
 import jakarta.persistence.Table;
 
@@ -61,6 +62,11 @@ public class Animal {
     // ou a própria imagem codificada (data:image/...) quando enviada pelo painel da ONG.
     @Column(name = "foto_url", columnDefinition = "TEXT")
     private String fotoUrl;
+
+    // ONG, protetor ou pessoa responsável pela campanha deste animal.
+    @ManyToOne
+    @JoinColumn(name = "ong_id")
+    private Ong ong;
 
 
     @ManyToMany
@@ -144,6 +150,14 @@ public class Animal {
 
     public void setMensalidadeSugerida(BigDecimal mensalidadeSugerida) {
         this.mensalidadeSugerida = mensalidadeSugerida;
+    }
+
+    public Ong getOng() {
+        return ong;
+    }
+
+    public void setOng(Ong ong) {
+        this.ong = ong;
     }
 
     public String getFotoUrl() {

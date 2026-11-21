@@ -1,19 +1,20 @@
 import * as api from '../api.js';
 import {
   esc, fmtMoeda, fmtData, iniciais, barraProgresso, statusBadge,
-  animalCard, toast
+  animalCard, toast, fotoAnimal
 } from '../components.js';
 import { abrirDoacao } from '../doacao-modal.js';
 import { mesmoId } from '../ids.js';
+import { getUsuarioLogado } from '../state.js';
 
 export async function renderPadrinho(app) {
-  const [usuarios, ong, animais] = await Promise.all([
-    api.getUsuarios(),
-    api.getOng(),
+  const [ongs, animais] = await Promise.all([
+    api.listarOngs(),
     api.listarAnimais()
   ]);
+  const mapaOngs = new Map(ongs.map((ong) => [String(ong.id), ong]));
 
-  const padrinho = usuarios?.padrinhoAtual || {};
+  const padrinho = getUsuarioLogado() || {};
   const temPadrinho = padrinho.id !== null && padrinho.id !== undefined;
 
   if (!temPadrinho) {
@@ -63,7 +64,7 @@ export async function renderPadrinho(app) {
 
     <h2 class="section-title">Meus afilhados</h2>
     ${afilhados.length
-      ? `<div class="grid">${afilhados.map((animal) => cardAfilhado(animal, ong)).join('')}</div>`
+      ? `<div class="grid">${afilhados.map((animal) => cardAfilhado(animal)).join('')}</div>`
       : '<div class="empty-state"><p>Você ainda não apadrinhou nenhum animal. Escolha um na lista abaixo.</p></div>'}
 
     <h2 class="section-title">Animais para apadrinhar</h2>
@@ -82,6 +83,12 @@ export async function renderPadrinho(app) {
     botao.addEventListener('click', () => {
       const animal = afilhados.find((item) => mesmoId(item.id, botao.dataset.padrinhar));
       if (!animal) return;
+
+      const ong = mapaOngs.get(String(animal.ongId));
+      if (!ong) {
+        toast('Não foi possível encontrar os dados de pagamento desta ONG.', 'erro');
+        return;
+      }
 
       abrirDoacao({
         animal,
@@ -112,7 +119,7 @@ export async function renderPadrinho(app) {
   });
 }
 
-function cardAfilhado(animal, ong) {
+function cardAfilhado(animal) {
   const inativo = animal.status !== 'ATIVO';
   const necessidades = (animal.necessidades || [])
     .map((item) => `<li>${esc(item)}</li>`)
@@ -120,6 +127,7 @@ function cardAfilhado(animal, ong) {
 
   return `
     <article class="card animal-card">
+      ${fotoAnimal(animal)}
       <div class="animal-top">
         <div class="animal-avatar">${iniciais(animal.nome)}</div>
         <div class="animal-id">
@@ -134,7 +142,7 @@ function cardAfilhado(animal, ong) {
         <h4>Necessidades</h4>
         <ul class="needs-list">${necessidades}</ul>
       </div>
-      <p class="muted small">Apadrinhado por você · ONG ${esc(ong.nome)}</p>
+      <p class="muted small">Apadrinhado por você · ${esc(animal.ongNome || 'ONG')}</p>
       <div class="card-actions">
         <button class="btn btn-primary btn-sm" type="button" data-padrinhar="${esc(animal.id)}" ${inativo ? 'disabled' : ''}>
           ${inativo

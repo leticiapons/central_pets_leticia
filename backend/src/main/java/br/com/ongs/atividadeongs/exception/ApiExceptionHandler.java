@@ -16,6 +16,16 @@ public class ApiExceptionHandler {
         return ResponseEntity.status(404).body(Map.of("mensagem", e.getMessage()));
     }
 
+    @ExceptionHandler(NaoAutorizadoException.class)
+    public ResponseEntity<Map<String, String>> naoAutorizado(NaoAutorizadoException e) {
+        return ResponseEntity.status(401).body(Map.of("mensagem", e.getMessage()));
+    }
+
+    @ExceptionHandler(AcessoNegadoException.class)
+    public ResponseEntity<Map<String, String>> acessoNegado(AcessoNegadoException e) {
+        return ResponseEntity.status(403).body(Map.of("mensagem", e.getMessage()));
+    }
+
     @ExceptionHandler(RegraNegocioException.class)
     public ResponseEntity<Map<String, String>> regraNegocio(RegraNegocioException e) {
         return ResponseEntity.status(409).body(Map.of("mensagem", e.getMessage()));

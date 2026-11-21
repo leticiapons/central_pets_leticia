@@ -1,18 +1,19 @@
 import { CONFIG } from './config.js';
 import * as mock from './mock.js';
 import { mesmoId } from './ids.js';
+import { getToken } from './state.js';
 
 const USAR_MOCK = CONFIG.USE_MOCK;
 
 async function http(caminho, opcoes = {}) {
   const requisicao = { ...opcoes };
+  const token = getToken();
 
-  if (opcoes.body !== undefined) {
-    requisicao.headers = {
-      'Content-Type': 'application/json',
-      ...(opcoes.headers || {})
-    };
-  }
+  requisicao.headers = {
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(opcoes.body !== undefined ? { 'Content-Type': 'application/json' } : {}),
+    ...(opcoes.headers || {})
+  };
 
   const resposta = await fetch(`${CONFIG.BASE_URL}${caminho}`, requisicao);
 
@@ -46,14 +47,51 @@ function enriquecerAnimal(animal, doacoes) {
   };
 }
 
-export async function getOng() {
-  return USAR_MOCK ? mock.obterOng() : http('/ong');
+export async function entrar(email, senha) {
+  if (USAR_MOCK) {
+    throw new Error('O login está disponível apenas com a API real.');
+  }
+
+  return http('/auth/login', { method: 'POST', body: JSON.stringify({ email, senha }) });
 }
 
-export async function atualizarOng(dados) {
+export async function cadastrar(dados) {
+  if (USAR_MOCK) {
+    throw new Error('O cadastro está disponível apenas com a API real.');
+  }
+
+  return http('/auth/cadastro', { method: 'POST', body: JSON.stringify(dados) });
+}
+
+export async function sair() {
+  if (USAR_MOCK) return;
+
+  try {
+    await http('/auth/logout', { method: 'POST' });
+  } catch {
+    /* mesmo que a API não responda, a sessão local é encerrada */
+  }
+}
+
+export async function listarOngs() {
+  return USAR_MOCK ? [await mock.obterOng()] : http('/ongs');
+}
+
+export async function obterOng(id) {
+  return USAR_MOCK ? mock.obterOng() : http(`/ongs/${id}`);
+}
+
+export async function atualizarMinhaOng(dados) {
   return USAR_MOCK
     ? mock.atualizarOng(dados)
-    : http('/ong', { method: 'PUT', body: JSON.stringify(dados) });
+    : http('/ongs/minha', { method: 'PUT', body: JSON.stringify(dados) });
+}
+
+export async function listarDoacoesDaMinhaOng() {
+  if (USAR_MOCK) return listarDoacoes();
+
+  const doacoes = await http('/ongs/minha/doacoes');
+  return [...doacoes].sort((a, b) => new Date(b.data) - new Date(a.data));
 }
 
 export async function getUsuarios() {
@@ -61,18 +99,17 @@ export async function getUsuarios() {
 }
 
 export async function listarAnimais(filtro = {}) {
-  let animais;
-  let doacoes;
+  let lista;
 
   if (USAR_MOCK) {
-    animais = await mock.obterAnimaisBrutos();
-    doacoes = await mock.obterDoacoesBrutas();
+    const animais = await mock.obterAnimaisBrutos();
+    const doacoes = await mock.obterDoacoesBrutas();
+    lista = animais.map((animal) => enriquecerAnimal(animal, doacoes));
   } else {
-    animais = await http('/animais');
-    doacoes = await http('/doacoes');
+    // A API já devolve arrecadado, percentual e metaAtingida de cada animal.
+    lista = await http('/animais');
   }
 
-  let lista = animais.map((animal) => enriquecerAnimal(animal, doacoes));
   if (filtro.status) lista = lista.filter((animal) => animal.status === filtro.status);
   return lista;
 }

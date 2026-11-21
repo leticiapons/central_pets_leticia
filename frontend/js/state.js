@@ -1,9 +1,9 @@
-const PERFIL_KEY = 'ong_perfil_ativo';
+const SESSAO_KEY = 'ong_sessao';
 
 export const PERFIS = {
   ADM: {
-    label: 'Administrador (ONG)',
-    descricao: 'Cadastre animais, defina necessidades, acompanhe metas e veja todas as doações recebidas.'
+    label: 'Protetor / ONG',
+    descricao: 'Cadastre os animais que precisam de ajuda, acompanhe as metas e veja as doações recebidas.'
   },
   USUARIO: {
     label: 'Doador',
@@ -15,16 +15,42 @@ export const PERFIS = {
   }
 };
 
+export function getSessao() {
+  try {
+    const bruto = localStorage.getItem(SESSAO_KEY);
+    if (!bruto) return null;
+    const sessao = JSON.parse(bruto);
+    return sessao && sessao.token && sessao.usuario ? sessao : null;
+  } catch {
+    return null;
+  }
+}
+
+export function setSessao(token, usuario) {
+  localStorage.setItem(SESSAO_KEY, JSON.stringify({ token, usuario }));
+}
+
+export function atualizarUsuarioLogado(parcial) {
+  const sessao = getSessao();
+  if (sessao) setSessao(sessao.token, { ...sessao.usuario, ...parcial });
+}
+
+export function limparSessao() {
+  localStorage.removeItem(SESSAO_KEY);
+}
+
+export function getToken() {
+  const sessao = getSessao();
+  return sessao ? sessao.token : null;
+}
+
+export function getUsuarioLogado() {
+  const sessao = getSessao();
+  return sessao ? sessao.usuario : null;
+}
+
 export function getPerfil() {
-  const perfil = localStorage.getItem(PERFIL_KEY);
+  const usuario = getUsuarioLogado();
+  const perfil = usuario ? usuario.perfil : null;
   return perfil && Object.prototype.hasOwnProperty.call(PERFIS, perfil) ? perfil : null;
-}
-
-export function setPerfil(perfil) {
-  if (perfil) localStorage.setItem(PERFIL_KEY, perfil);
-  else localStorage.removeItem(PERFIL_KEY);
-}
-
-export function limparPerfil() {
-  localStorage.removeItem(PERFIL_KEY);
 }

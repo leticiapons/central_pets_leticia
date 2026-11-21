@@ -2,9 +2,11 @@ package br.com.ongs.atividadeongs.service;
 
 import br.com.ongs.atividadeongs.dto.AnimalRequest;
 import br.com.ongs.atividadeongs.dto.AnimalResponse;
+import br.com.ongs.atividadeongs.exception.AcessoNegadoException;
 import br.com.ongs.atividadeongs.exception.RecursoNaoEncontradoException;
 import br.com.ongs.atividadeongs.exception.RegraNegocioException;
 import br.com.ongs.atividadeongs.models.Animal;
+import br.com.ongs.atividadeongs.models.Ong;
 import br.com.ongs.atividadeongs.models.PerfilUsuario;
 import br.com.ongs.atividadeongs.models.StatusAnimal;
 import br.com.ongs.atividadeongs.models.StatusDoacao;
@@ -53,8 +55,9 @@ public class AnimalService {
     }
 
     @Transactional
-    public AnimalResponse criar(AnimalRequest req) {
+    public AnimalResponse criar(Ong ong, AnimalRequest req) {
         Animal animal = new Animal();
+        animal.setOng(ong);
         aplicarDados(animal, req);
         if (req.status() != null) {
             animal.setStatus(req.status());
@@ -68,8 +71,9 @@ public class AnimalService {
      * use {@link #atualizarStatus(Long, StatusAnimal)}.
      */
     @Transactional
-    public AnimalResponse atualizar(Long id, AnimalRequest req) {
+    public AnimalResponse atualizar(Long id, AnimalRequest req, Ong ong) {
         Animal animal = buscarEntidade(id);
+        exigirDono(animal, ong);
         aplicarDados(animal, req);
         return toResponse(animalRepository.save(animal));
     }
@@ -102,11 +106,12 @@ public class AnimalService {
     }
 
     @Transactional
-    public AnimalResponse atualizarStatus(Long id, StatusAnimal novoStatus) {
+    public AnimalResponse atualizarStatus(Long id, StatusAnimal novoStatus, Ong ong) {
         if (novoStatus == null) {
             throw new IllegalArgumentException("O status é obrigatório.");
         }
         Animal animal = buscarEntidade(id);
+        exigirDono(animal, ong);
         if (novoStatus == StatusAnimal.INATIVO && !calcularMetaAtingida(animal)) {
             throw new RegraNegocioException("Só é possível inativar o animal quando a meta for atingida.");
         }
@@ -162,6 +167,15 @@ public class AnimalService {
         }
 
         return toResponse(animal);
+    }
+
+    private void exigirDono(Animal animal, Ong ong) {
+        boolean dono = ong != null
+                && animal.getOng() != null
+                && Objects.equals(animal.getOng().getId(), ong.getId());
+        if (!dono) {
+            throw new AcessoNegadoException("Este animal pertence a outra ONG ou protetor.");
+        }
     }
 
     private Animal buscarEntidade(Long id) {
@@ -247,6 +261,8 @@ public class AnimalService {
                 a.getId(), a.getNome(), a.getEspecie(), a.getIdade(), a.getDescricao(),
                 a.getStatus(), meta, new ArrayList<>(a.getNecessidades()),
                 padrinhoIds, a.getMensalidadeSugerida(),
-                arrecadado, percentual, atingida, a.getFotoUrl());
+                arrecadado, percentual, atingida, a.getFotoUrl(),
+                a.getOng() == null ? null : a.getOng().getId(),
+                a.getOng() == null ? null : a.getOng().getNome());
     }
 }

@@ -8,6 +8,8 @@ import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
+import jakarta.persistence.ManyToOne;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
@@ -35,6 +37,17 @@ public class Usuario {
     @Enumerated(EnumType.STRING)
     @Column(nullable = false, length = 20)
     private PerfilUsuario perfil = PerfilUsuario.USUARIO;
+
+    // Nunca é exposta na API: guarda apenas o resultado da criptografia da senha.
+    @JsonIgnore
+    @Column(name = "senha_hash", length = 255)
+    private String senhaHash;
+
+    // Preenchida apenas para contas de ONG/protetor (perfil ADM): a campanha que a conta gerencia.
+    @JsonIgnore
+    @ManyToOne
+    @JoinColumn(name = "ong_id")
+    private Ong ong;
 
     @JsonIgnore
     @ManyToMany(mappedBy = "padrinhos")
@@ -77,6 +90,22 @@ public class Usuario {
 
     public void setPerfil(PerfilUsuario perfil) {
         this.perfil = perfil;
+    }
+
+    public String getSenhaHash() {
+        return senhaHash;
+    }
+
+    public void setSenhaHash(String senhaHash) {
+        this.senhaHash = senhaHash;
+    }
+
+    public Ong getOng() {
+        return ong;
+    }
+
+    public void setOng(Ong ong) {
+        this.ong = ong;
     }
 
     public Set<Animal> getAfilhados() {

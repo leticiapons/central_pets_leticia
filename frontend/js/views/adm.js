@@ -5,12 +5,13 @@ import {
   toast, confirmar
 } from '../components.js';
 import { lerImagemRedimensionada } from '../imagem.js';
+import { getUsuarioLogado, atualizarUsuarioLogado } from '../state.js';
 
 const ROTULOS_ABA = {
   animais: 'Animais',
   novo: 'Novo animal',
   doacoes: 'Doações',
-  perfil: 'Perfil da ONG'
+  perfil: 'Meu perfil'
 };
 
 const PERFIL_DOADOR = {
@@ -34,16 +35,28 @@ let filtroDe = '';
 let filtroAte = '';
 
 export async function renderAdm(app) {
-  const [ong, animais, doacoes] = await Promise.all([
-    api.getOng(),
+  const usuario = getUsuarioLogado();
+
+  if (!usuario || !usuario.ongId) {
+    app.innerHTML = `
+      <div class="empty-state">
+        <h2>Conta sem campanha</h2>
+        <p class="muted">Esta conta não está ligada a uma ONG ou protetor.</p>
+      </div>`;
+    return;
+  }
+
+  const [ong, todosAnimais, doacoes] = await Promise.all([
+    api.obterOng(usuario.ongId),
     api.listarAnimais(),
-    api.listarDoacoes()
+    api.listarDoacoesDaMinhaOng()
   ]);
+  const animais = todosAnimais.filter((animal) => mesmoId(animal.ongId, usuario.ongId));
 
   app.innerHTML = `
     <div class="page-head">
       <div>
-        <h1>Painel da ONG</h1>
+        <h1>Meu painel</h1>
         <p class="muted">${esc(ong.nome)} · gestão de animais, necessidades e doações</p>
       </div>
     </div>
@@ -393,7 +406,7 @@ function renderPerfilOng(container, contexto) {
   container.innerHTML = `
     <form class="card form" id="form-ong">
       <div class="form-grid">
-        <label class="field"><span>Nome da ONG</span><input name="nome" required value="${esc(ong.nome)}"></label>
+        <label class="field"><span>Nome (ONG, protetor ou pessoa)</span><input name="nome" required value="${esc(ong.nome)}"></label>
         <label class="field"><span>Telefone</span><input name="telefone" value="${esc(ong.telefone || '')}"></label>
         <label class="field full"><span>Descrição</span><textarea name="descricao">${esc(ong.descricao || '')}</textarea></label>
         <label class="field"><span>Chave PIX</span><input name="chavePix" required value="${esc(ong.chavePix || '')}"></label>
@@ -415,8 +428,9 @@ function renderPerfilOng(container, contexto) {
     const dados = Object.fromEntries(new FormData(evento.target));
 
     try {
-      await api.atualizarOng(dados);
-      toast('Dados da ONG atualizados.');
+      await api.atualizarMinhaOng(dados);
+      atualizarUsuarioLogado({ ongNome: dados.nome });
+      toast('Seus dados foram atualizados.');
       await renderAdm(contexto.app);
     } catch (erro) {
       toast(erro.message, 'erro');
