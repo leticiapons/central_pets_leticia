@@ -1,7 +1,7 @@
 import { CONFIG } from './config.js';
 import * as mock from './mock.js';
 import { mesmoId } from './ids.js';
-import { getToken } from './state.js';
+import { getToken, limparSessao } from './state.js';
 
 const USAR_MOCK = CONFIG.USE_MOCK;
 
@@ -25,6 +25,13 @@ async function http(caminho, opcoes = {}) {
     } catch {
       /* resposta sem corpo JSON */
     }
+
+    // Sessão vencida (ou perdida porque o back-end foi reiniciado): volta para o login.
+    if (resposta.status === 401 && token) {
+      limparSessao();
+      location.hash = '#/';
+    }
+
     throw new Error(mensagem);
   }
 
@@ -63,6 +70,11 @@ export async function cadastrar(dados) {
   return http('/auth/cadastro', { method: 'POST', body: JSON.stringify(dados) });
 }
 
+export async function usuarioAtual() {
+  if (USAR_MOCK) return null;
+  return http('/auth/me');
+}
+
 export async function sair() {
   if (USAR_MOCK) return;
 
@@ -92,10 +104,6 @@ export async function listarDoacoesDaMinhaOng() {
 
   const doacoes = await http('/ongs/minha/doacoes');
   return [...doacoes].sort((a, b) => new Date(b.data) - new Date(a.data));
-}
-
-export async function getUsuarios() {
-  return USAR_MOCK ? mock.obterUsuarios() : http('/usuarios');
 }
 
 export async function listarAnimais(filtro = {}) {
@@ -159,7 +167,7 @@ export async function inativarAnimal(id) {
 }
 
 export async function listarDoacoes(filtro = {}) {
-  let doacoes = USAR_MOCK ? await mock.obterDoacoesBrutas() : await http('/doacoes');
+  let doacoes = USAR_MOCK ? await mock.obterDoacoesBrutas() : await http('/doacoes/minhas');
 
   doacoes = [...doacoes].sort((a, b) => new Date(b.data) - new Date(a.data));
   if (filtro.animalId != null) {

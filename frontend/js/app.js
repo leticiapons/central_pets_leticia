@@ -1,6 +1,6 @@
 import * as api from './api.js';
-import { getPerfil, getUsuarioLogado, limparSessao, PERFIS } from './state.js';
-import { esc } from './components.js';
+import { atualizarUsuarioLogado, getPerfil, getToken, getUsuarioLogado, limparSessao, PERFIS } from './state.js';
+import { esc, toast } from './components.js';
 import { renderLogin } from './views/login.js';
 import { renderAdm } from './views/adm.js';
 import { renderUsuario } from './views/usuario.js';
@@ -64,6 +64,12 @@ async function render() {
   try {
     await destino.render(app);
   } catch (erro) {
+    if (!getPerfil()) {
+      // A sessão foi encerrada (por exemplo, expirou): a tela de login será exibida.
+      toast('Sua sessão expirou. Entre novamente.', 'erro');
+      return;
+    }
+
     app.innerHTML = `
       <div class="empty-state">
         <h2>Não foi possível carregar</h2>
@@ -82,7 +88,23 @@ botaoSair.addEventListener('click', async (evento) => {
 
 window.addEventListener('hashchange', render);
 
+// Ao abrir ou atualizar a página, confere se a sessão guardada no navegador ainda vale.
+async function verificarSessao() {
+  if (!getToken()) return;
+
+  try {
+    const usuario = await api.usuarioAtual();
+    if (usuario) atualizarUsuarioLogado(usuario);
+  } catch {
+    if (!getToken()) {
+      toast('Sua sessão expirou. Entre novamente.', 'erro');
+    }
+  }
+}
+
 window.addEventListener('DOMContentLoaded', async () => {
+  await verificarSessao();
+
   if (!location.hash) {
     location.hash = '#/';
     return;

@@ -34,14 +34,6 @@ public class DoacaoService {
     }
 
     @Transactional(readOnly = true)
-    public List<DoacaoResponse> listar() {
-        return doacaoRepository.findAll()
-                .stream()
-                .map(this::toResponse)
-                .toList();
-    }
-
-    @Transactional(readOnly = true)
     public List<DoacaoResponse> listarPorOng(Long ongId) {
         return doacaoRepository.findAll()
                 .stream()
@@ -51,8 +43,21 @@ public class DoacaoService {
                 .toList();
     }
 
+    @Transactional(readOnly = true)
+    public List<DoacaoResponse> listarPorPadrinho(Long padrinhoId) {
+        return doacaoRepository.findAll()
+                .stream()
+                .filter(d -> d.getPadrinho() != null && Objects.equals(d.getPadrinho().getId(), padrinhoId))
+                .map(this::toResponse)
+                .toList();
+    }
+
+    /**
+     * Registra uma doação feita por quem está logado. O perfil e o padrinho vêm da
+     * conta de quem doa, e não do que o navegador enviou.
+     */
     @Transactional
-    public DoacaoResponse criar(DoacaoRequest dados) {
+    public DoacaoResponse criar(Usuario doador, DoacaoRequest dados) {
         if (dados.animalId() == null) {
             throw new IllegalArgumentException("Informe o animal da doação.");
         }
@@ -75,31 +80,18 @@ public class DoacaoService {
             throw new RegraNegocioException("O animal está inativo.");
         }
 
-        if (dados.perfil() == null) {
-            throw new IllegalArgumentException("Informe o perfil do doador.");
-        }
-
+        PerfilUsuario perfil = doador.getPerfil();
         Usuario padrinho = null;
 
-        if (dados.perfil() == PerfilUsuario.PADRINHO) {
-            if (dados.padrinhoId() == null) {
-                throw new IllegalArgumentException("Informe o padrinho da doação.");
-            }
-
-            padrinho = usuarioRepository.findById(dados.padrinhoId())
+        if (perfil == PerfilUsuario.PADRINHO) {
+            padrinho = usuarioRepository.findById(doador.getId())
                     .orElseThrow(() -> new RecursoNaoEncontradoException("Padrinho não encontrado."));
-
-            if (padrinho.getPerfil() != PerfilUsuario.PADRINHO) {
-                throw new IllegalArgumentException("O usuário informado não possui perfil de padrinho.");
-            }
-        } else if (dados.padrinhoId() != null) {
-            throw new IllegalArgumentException("Somente doações de padrinhos podem informar padrinhoId.");
         }
 
         String nome = dados.doadorNome();
 
         if (nome == null || nome.isBlank()) {
-            nome = "Doador anônimo";
+            nome = doador.getNome();
         } else {
             nome = nome.trim();
         }
@@ -110,7 +102,7 @@ public class DoacaoService {
 
         Doacao doacao = new Doacao();
         doacao.setAnimal(animal);
-        doacao.setPerfil(dados.perfil());
+        doacao.setPerfil(perfil);
         doacao.setPadrinho(padrinho);
         doacao.setDoadorNome(nome);
         doacao.setValor(valor);

@@ -4,7 +4,10 @@ import br.com.ongs.atividadeongs.dto.AnimalRequest;
 import br.com.ongs.atividadeongs.dto.AnimalResponse;
 import br.com.ongs.atividadeongs.dto.AnimalStatusRequest;
 import br.com.ongs.atividadeongs.dto.PadrinhoRequest;
+import br.com.ongs.atividadeongs.exception.AcessoNegadoException;
 import br.com.ongs.atividadeongs.models.Ong;
+import br.com.ongs.atividadeongs.models.PerfilUsuario;
+import br.com.ongs.atividadeongs.models.Usuario;
 import br.com.ongs.atividadeongs.service.AnimalService;
 import br.com.ongs.atividadeongs.service.AuthService;
 import org.springframework.http.ResponseEntity;
@@ -21,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.net.URI;
 import java.util.List;
+import java.util.Objects;
 
 @RestController
 @RequestMapping("/api/animais")
@@ -72,14 +76,24 @@ public class AnimalController {
     }
 
     @PostMapping("/{id}/padrinhos")
-    public ResponseEntity<AnimalResponse> adicionarPadrinho(@PathVariable Long id,
-                                                            @RequestBody PadrinhoRequest dados) {
-        return ResponseEntity.ok(service.adicionarPadrinho(id, dados.usuarioId()));
+    public ResponseEntity<AnimalResponse> adicionarPadrinho(
+            @RequestHeader(value = "Authorization", required = false) String autorizacao,
+            @PathVariable Long id,
+            @RequestBody(required = false) PadrinhoRequest ignorado) {
+        // Quem apadrinha é sempre a conta logada, e não o que veio no corpo do pedido.
+        Usuario padrinho = authService.exigirUsuario(autorizacao, PerfilUsuario.PADRINHO);
+        return ResponseEntity.ok(service.adicionarPadrinho(id, padrinho.getId()));
     }
 
     @DeleteMapping("/{id}/padrinhos/{usuarioId}")
-    public ResponseEntity<AnimalResponse> removerPadrinho(@PathVariable Long id,
-                                                          @PathVariable Long usuarioId) {
+    public ResponseEntity<AnimalResponse> removerPadrinho(
+            @RequestHeader(value = "Authorization", required = false) String autorizacao,
+            @PathVariable Long id,
+            @PathVariable Long usuarioId) {
+        Usuario padrinho = authService.exigirUsuario(autorizacao, PerfilUsuario.PADRINHO);
+        if (!Objects.equals(padrinho.getId(), usuarioId)) {
+            throw new AcessoNegadoException("Você só pode alterar o seu próprio apadrinhamento.");
+        }
         return ResponseEntity.ok(service.removerPadrinho(id, usuarioId));
     }
 }
