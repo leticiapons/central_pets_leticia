@@ -2,7 +2,9 @@ package br.com.ongs.atividadeongs.controller;
 
 import br.com.ongs.atividadeongs.dto.DoacaoRequest;
 import br.com.ongs.atividadeongs.dto.DoacaoResponse;
+import br.com.ongs.atividadeongs.dto.DoacaoStatusRequest;
 import br.com.ongs.atividadeongs.exception.AcessoNegadoException;
+import br.com.ongs.atividadeongs.models.Ong;
 import br.com.ongs.atividadeongs.models.PerfilUsuario;
 import br.com.ongs.atividadeongs.models.Usuario;
 import br.com.ongs.atividadeongs.service.AuthService;
@@ -31,6 +33,16 @@ public class DoacaoController {
             @RequestHeader(value = "Authorization", required = false) String autorizacao) {
         Usuario padrinho = authService.exigirUsuario(autorizacao, PerfilUsuario.PADRINHO);
         return ResponseEntity.ok(doacaoService.listarPorPadrinho(padrinho.getId()));
+    }
+
+    /** A ONG ou protetor confirma, recusa ou desfaz o recebimento de uma doação. */
+    @PatchMapping("/{id}/status")
+    public ResponseEntity<DoacaoResponse> alterarStatus(
+            @RequestHeader(value = "Authorization", required = false) String autorizacao,
+            @PathVariable Long id,
+            @RequestBody DoacaoStatusRequest dados) {
+        Ong ong = authService.exigirOngDoUsuario(autorizacao);
+        return ResponseEntity.ok(doacaoService.atualizarStatus(id, dados.status(), ong));
     }
 
     /** Doadores e padrinhos logados registram doações. ONGs e protetores não doam. */

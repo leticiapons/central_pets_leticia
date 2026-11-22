@@ -1,7 +1,7 @@
 import * as api from '../api.js';
 import {
   esc, fmtMoeda, fmtData, iniciais, barraProgresso, statusBadge,
-  animalCard, toast, fotoAnimal
+  animalCard, toast, fotoAnimal, statusDoacaoBadge
 } from '../components.js';
 import { abrirDoacao } from '../doacao-modal.js';
 import { mesmoId } from '../ids.js';
@@ -37,14 +37,14 @@ export async function renderPadrinho(app) {
   );
 
   const doacoes = await api.listarDoacoes({ padrinhoId: padrinho.id });
-  const doacoesValidas = doacoes.filter((doacao) => doacao.status !== 'CANCELADA');
+  const doacoesConfirmadas = doacoes.filter((doacao) => doacao.status === 'DOADO');
 
   const disponiveis = animais.filter((animal) =>
     animal.status === 'ATIVO' &&
     !afilhados.some((afilhado) => mesmoId(afilhado.id, animal.id))
   );
 
-  const totalDoado = doacoesValidas.reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
+  const totalDoado = doacoesConfirmadas.reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
   const mapaAnimais = new Map(animais.map((animal) => [String(animal.id), animal.nome]));
   const primeiroNome = String(padrinho.nome || 'Padrinho').trim().split(/\s+/)[0];
 
@@ -59,7 +59,7 @@ export async function renderPadrinho(app) {
     <div class="stats">
       <div class="stat"><div class="stat-label">Afilhados</div><div class="stat-value">${afilhados.length}</div></div>
       <div class="stat"><div class="stat-label">Total doado</div><div class="stat-value">${fmtMoeda(totalDoado)}</div></div>
-      <div class="stat"><div class="stat-label">Doações realizadas</div><div class="stat-value">${doacoesValidas.length}</div></div>
+      <div class="stat"><div class="stat-label">Doações confirmadas</div><div class="stat-value">${doacoesConfirmadas.length}</div></div>
     </div>
 
     <h2 class="section-title">Meus afilhados</h2>
@@ -158,19 +158,16 @@ function tabelaMinhasDoacoes(doacoes, mapaAnimais) {
     <div class="card table-wrap">
       <table class="table">
         <thead>
-          <tr><th>Data</th><th>Animal</th><th>Valor</th><th>Status</th></tr>
+          <tr><th>Data</th><th>Animal</th><th>Valor</th><th>Situação</th></tr>
         </thead>
         <tbody>
-          ${doacoes.map((doacao) => {
-            const cancelada = doacao.status === 'CANCELADA';
-            return `
+          ${doacoes.map((doacao) => `
             <tr>
               <td>${fmtData(doacao.data)}</td>
               <td>${esc(mapaAnimais.get(String(doacao.animalId)) || '—')}</td>
               <td class="valor">${fmtMoeda(doacao.valor)}</td>
-              <td><span class="badge ${cancelada ? 'badge-muted' : 'badge-ok'}">${cancelada ? 'Cancelada' : 'Doado'}</span></td>
-            </tr>`;
-          }).join('')}
+              <td>${statusDoacaoBadge(doacao.status)}</td>
+            </tr>`).join('')}
         </tbody>
       </table>
     </div>`;

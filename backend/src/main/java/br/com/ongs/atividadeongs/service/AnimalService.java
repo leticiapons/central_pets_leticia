@@ -184,7 +184,7 @@ public class AnimalService {
     }
 
     private BigDecimal arrecadado(Animal a) {
-        return doacaoRepository.somarValorPorAnimal(a.getId(), StatusDoacao.CANCELADA);
+        return doacaoRepository.somarValorPorAnimal(a.getId(), StatusDoacao.DOADO);
     }
 
     private boolean calcularMetaAtingida(Animal a) {

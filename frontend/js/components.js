@@ -36,6 +36,12 @@ export function statusBadge(status) {
     : '<span class="badge badge-muted">Inativo</span>';
 }
 
+export function statusDoacaoBadge(status) {
+  if (status === 'DOADO') return '<span class="badge badge-ok">Confirmada</span>';
+  if (status === 'CANCELADA') return '<span class="badge badge-muted">Não recebida</span>';
+  return '<span class="badge badge-warn">Aguardando confirmação</span>';
+}
+
 export function barraProgresso(animal) {
   const percentual = animal.percentual ?? 0;
   return `

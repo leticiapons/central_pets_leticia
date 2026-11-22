@@ -41,7 +41,7 @@ async function http(caminho, opcoes = {}) {
 
 function enriquecerAnimal(animal, doacoes) {
   const arrecadado = doacoes
-    .filter((d) => mesmoId(d.animalId, animal.id) && d.status !== 'CANCELADA')
+    .filter((d) => mesmoId(d.animalId, animal.id) && d.status === 'DOADO')
     .reduce((soma, d) => soma + Number(d.valor || 0), 0);
   const meta = Number(animal.meta || 0);
   const percentual = meta > 0 ? Math.min(100, Math.round((arrecadado / meta) * 100)) : 0;
@@ -177,6 +177,14 @@ export async function listarDoacoes(filtro = {}) {
     doacoes = doacoes.filter((d) => mesmoId(d.padrinhoId, filtro.padrinhoId));
   }
   return doacoes;
+}
+
+export async function atualizarStatusDoacao(id, status) {
+  if (USAR_MOCK) {
+    throw new Error('A confirmação de doações está disponível apenas com a API real.');
+  }
+
+  return http(`/doacoes/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
 }
 
 export async function criarDoacao(dados) {

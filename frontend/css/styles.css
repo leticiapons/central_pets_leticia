@@ -975,3 +975,19 @@ body.modal-aberto {
   margin: 0 0 0.25rem;
   font-size: 1.05rem;
 }
+
+
+/* ---------- Confirmação de doações ---------- */
+
+.badge-warn {
+  background: #fff3d6;
+  color: #7a5600;
+}
+
+.acoes-doacao {
+  white-space: nowrap;
+}
+
+.acoes-doacao .btn {
+  margin-right: 0.25rem;
+}

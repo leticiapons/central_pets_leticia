@@ -44,7 +44,7 @@ export function abrirDoacao({ animal, ong, perfil, doador = null, valorSugerido 
                    value="${valorSugerido ?? ''}" placeholder="Digite o valor">
           </label>
 
-          <button class="btn btn-primary btn-block" type="submit">Já fiz o PIX • Marcar como doado</button>
+          <button class="btn btn-primary btn-block" type="submit">Já fiz o PIX • Avisar que paguei</button>
           <p class="hint small">Sem confirmação real de pagamento — o registro é feito por confiança (MVP).</p>
         </form>
       </div>`,
@@ -91,12 +91,12 @@ export function abrirDoacao({ animal, ong, perfil, doador = null, valorSugerido 
             valor
           });
           fecharModal();
-          toast(`Doação de ${fmtMoeda(valor)} registrada. Obrigado!`);
+          toast(`Doação de ${fmtMoeda(valor)} registrada. Ela entra na meta quando ${ong.nome} confirmar o recebimento. Obrigado!`);
           if (typeof aoConcluir === 'function') await aoConcluir();
         } catch (erro) {
           toast(erro.message, 'erro');
           botao.disabled = false;
-          botao.textContent = 'Já fiz o PIX • Marcar como doado';
+          botao.textContent = 'Já fiz o PIX • Avisar que paguei';
         }
       });
     }

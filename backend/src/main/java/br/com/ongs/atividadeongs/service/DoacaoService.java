@@ -2,6 +2,7 @@ package br.com.ongs.atividadeongs.service;
 
 import br.com.ongs.atividadeongs.dto.DoacaoRequest;
 import br.com.ongs.atividadeongs.dto.DoacaoResponse;
+import br.com.ongs.atividadeongs.exception.AcessoNegadoException;
 import br.com.ongs.atividadeongs.exception.RecursoNaoEncontradoException;
 import br.com.ongs.atividadeongs.exception.RegraNegocioException;
 import br.com.ongs.atividadeongs.models.*;
@@ -107,7 +108,7 @@ public class DoacaoService {
         doacao.setDoadorNome(nome);
         doacao.setValor(valor);
         doacao.setData(Instant.now());
-        doacao.setStatus(StatusDoacao.DOADO);
+        doacao.setStatus(StatusDoacao.PENDENTE);
 
         // Uma doação feita como padrinho consolida o apadrinhamento do animal.
         if (padrinho != null) {
@@ -120,6 +121,28 @@ public class DoacaoService {
             }
         }
 
+        return toResponse(doacaoRepository.save(doacao));
+    }
+
+    /**
+     * A ONG ou protetor dona do animal confirma (DOADO), recusa (CANCELADA) ou
+     * desfaz (PENDENTE) uma doação recebida pelos seus animais.
+     */
+    @Transactional
+    public DoacaoResponse atualizarStatus(Long id, StatusDoacao novoStatus, Ong ong) {
+        if (novoStatus == null) {
+            throw new IllegalArgumentException("O status é obrigatório.");
+        }
+
+        Doacao doacao = doacaoRepository.findById(id)
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Doação não encontrada."));
+
+        Ong dona = doacao.getAnimal().getOng();
+        if (ong == null || dona == null || !Objects.equals(dona.getId(), ong.getId())) {
+            throw new AcessoNegadoException("Esta doação pertence a outra ONG ou protetor.");
+        }
+
+        doacao.setStatus(novoStatus);
         return toResponse(doacaoRepository.save(doacao));
     }
 

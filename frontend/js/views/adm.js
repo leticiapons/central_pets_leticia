@@ -2,7 +2,7 @@ import * as api from '../api.js';
 import { mesmoId } from '../ids.js';
 import {
   esc, fmtMoeda, fmtData, animalCard, abrirModal,
-  toast, confirmar
+  toast, confirmar, statusDoacaoBadge
 } from '../components.js';
 import { lerImagemRedimensionada } from '../imagem.js';
 import { getUsuarioLogado, atualizarUsuarioLogado } from '../state.js';
@@ -28,7 +28,15 @@ const PERIODOS = {
   personalizado: 'Escolher datas'
 };
 
+const SITUACOES = {
+  todas: 'Todas as situações',
+  PENDENTE: 'Aguardando confirmação',
+  DOADO: 'Confirmadas',
+  CANCELADA: 'Não recebidas'
+};
+
 let abaAtiva = 'animais';
+let filtroSituacao = 'todas';
 let animalEmEdicao = null;
 let filtroPeriodo = 'tudo';
 let filtroDe = '';
@@ -53,6 +61,13 @@ export async function renderAdm(app) {
   ]);
   const animais = todosAnimais.filter((animal) => mesmoId(animal.ongId, usuario.ongId));
 
+  const pendentes = doacoes.filter((doacao) => doacao.status === 'PENDENTE').length;
+  const rotuloAba = (aba) => {
+    if (aba === 'novo' && animalEmEdicao) return 'Editar animal';
+    if (aba === 'doacoes' && pendentes) return `Doações (${pendentes})`;
+    return ROTULOS_ABA[aba];
+  };
+
   app.innerHTML = `
     <div class="page-head">
       <div>
@@ -62,7 +77,7 @@ export async function renderAdm(app) {
     </div>
 
     <nav class="tabs">
-      ${Object.keys(ROTULOS_ABA).map((aba) => `<button class="tab" type="button" data-aba="${aba}">${aba === 'novo' && animalEmEdicao ? 'Editar animal' : ROTULOS_ABA[aba]}</button>`).join('')}
+      ${Object.keys(ROTULOS_ABA).map((aba) => `<button class="tab" type="button" data-aba="${aba}">${rotuloAba(aba)}</button>`).join('')}
     </nav>
 
     <section id="aba-conteudo"></section>`;
@@ -314,18 +329,22 @@ function filtrarPorPeriodo(doacoes) {
 
 function renderDoacoes(container, contexto) {
   const { doacoes, animais } = contexto;
-  const filtradas = filtrarPorPeriodo(doacoes);
-  const total = filtradas
-    .filter((doacao) => doacao.status !== 'CANCELADA')
+  const noPeriodo = filtrarPorPeriodo(doacoes);
+  const filtradas = filtroSituacao === 'todas'
+    ? noPeriodo
+    : noPeriodo.filter((doacao) => doacao.status === filtroSituacao);
+  const total = noPeriodo
+    .filter((doacao) => doacao.status === 'DOADO')
     .reduce((soma, doacao) => soma + Number(doacao.valor || 0), 0);
+  const pendentes = noPeriodo.filter((doacao) => doacao.status === 'PENDENTE').length;
   const ativos = animais.filter((animal) => animal.status === 'ATIVO').length;
   const mapaAnimais = new Map(animais.map((animal) => [String(animal.id), animal.nome]));
 
-  let listagem = tabelaDoacoes(filtradas, mapaAnimais);
+  let listagem = tabelaDoacoes(filtradas, mapaAnimais, true);
   if (!doacoes.length) {
     listagem = '<div class="empty-state"><p>Nenhuma doação recebida ainda.</p></div>';
   } else if (!filtradas.length) {
-    listagem = '<div class="empty-state"><p>Nenhuma doação neste período.</p></div>';
+    listagem = '<div class="empty-state"><p>Nenhuma doação com esse filtro.</p></div>';
   }
 
   container.innerHTML = `
@@ -339,17 +358,29 @@ function renderDoacoes(container, contexto) {
       ${filtroPeriodo === 'personalizado' ? `
         <label class="field"><span>De</span><input type="date" id="filtro-de" value="${esc(filtroDe)}"></label>
         <label class="field"><span>Até</span><input type="date" id="filtro-ate" value="${esc(filtroAte)}"></label>` : ''}
+      <label class="field">
+        <span>Situação</span>
+        <select id="filtro-situacao">
+          ${Object.entries(SITUACOES).map(([valor, rotulo]) => `<option value="${valor}" ${filtroSituacao === valor ? 'selected' : ''}>${rotulo}</option>`).join('')}
+        </select>
+      </label>
       <p class="muted filtro-resumo">Mostrando ${filtradas.length} de ${doacoes.length} doações</p>
     </div>
     <div class="stats">
-      <div class="stat"><div class="stat-label">Total recebido</div><div class="stat-value">${fmtMoeda(total)}</div></div>
-      <div class="stat"><div class="stat-label">Doações</div><div class="stat-value">${filtradas.length}</div></div>
+      <div class="stat"><div class="stat-label">Total recebido (confirmado)</div><div class="stat-value">${fmtMoeda(total)}</div></div>
+      <div class="stat"><div class="stat-label">Aguardando confirmação</div><div class="stat-value">${pendentes}</div></div>
+      <div class="stat"><div class="stat-label">Doações listadas</div><div class="stat-value">${filtradas.length}</div></div>
       <div class="stat"><div class="stat-label">Animais ativos</div><div class="stat-value">${ativos}</div></div>
     </div>
     ${listagem}`;
 
   container.querySelector('#filtro-periodo').addEventListener('change', (evento) => {
     filtroPeriodo = evento.target.value;
+    renderDoacoes(container, contexto);
+  });
+
+  container.querySelector('#filtro-situacao').addEventListener('change', (evento) => {
+    filtroSituacao = evento.target.value;
     renderDoacoes(container, contexto);
   });
 
@@ -368,9 +399,39 @@ function renderDoacoes(container, contexto) {
     campoDe.addEventListener('change', atualizarDatas);
     campoAte.addEventListener('change', atualizarDatas);
   }
+
+  const alterarStatus = async (id, status, mensagem) => {
+    try {
+      await api.atualizarStatusDoacao(id, status);
+      toast(mensagem);
+      await renderAdm(contexto.app);
+    } catch (erro) {
+      toast(erro.message, 'erro');
+    }
+  };
+
+  container.querySelectorAll('[data-confirmar]').forEach((botao) => {
+    botao.addEventListener('click', () => alterarStatus(botao.dataset.confirmar, 'DOADO', 'Recebimento confirmado.'));
+  });
+  container.querySelectorAll('[data-recusar]').forEach((botao) => {
+    botao.addEventListener('click', () => alterarStatus(botao.dataset.recusar, 'CANCELADA', 'Doação marcada como não recebida.'));
+  });
+  container.querySelectorAll('[data-desfazer]').forEach((botao) => {
+    botao.addEventListener('click', () => alterarStatus(botao.dataset.desfazer, 'PENDENTE', 'A doação voltou para aguardando confirmação.'));
+  });
 }
 
-function tabelaDoacoes(doacoes, mapaAnimais = null) {
+function acoesDaDoacao(doacao) {
+  const id = esc(doacao.id);
+  if (doacao.status === 'PENDENTE') {
+    return `
+      <button class="btn btn-sm btn-primary" type="button" data-confirmar="${id}">Confirmar</button>
+      <button class="btn btn-sm btn-ghost" type="button" data-recusar="${id}">Não recebi</button>`;
+  }
+  return `<button class="btn btn-sm btn-ghost" type="button" data-desfazer="${id}">Desfazer</button>`;
+}
+
+function tabelaDoacoes(doacoes, mapaAnimais = null, comAcoes = false) {
   return `
     <div class="card table-wrap">
       <table class="table">
@@ -381,7 +442,8 @@ function tabelaDoacoes(doacoes, mapaAnimais = null) {
             <th>Doador</th>
             <th>Perfil</th>
             <th>Valor</th>
-            <th>Status</th>
+            <th>Situação</th>
+            ${comAcoes ? '<th>Ações</th>' : ''}
           </tr>
         </thead>
         <tbody>
@@ -392,7 +454,8 @@ function tabelaDoacoes(doacoes, mapaAnimais = null) {
               <td>${esc(doacao.doadorNome || 'Anônimo')}</td>
               <td>${esc(PERFIL_DOADOR[doacao.perfil] || doacao.perfil)}</td>
               <td class="valor">${fmtMoeda(doacao.valor)}</td>
-              <td><span class="badge badge-ok">${doacao.status === 'DOADO' ? 'Doado' : esc(doacao.status)}</span></td>
+              <td>${statusDoacaoBadge(doacao.status)}</td>
+              ${comAcoes ? `<td class="acoes-doacao">${acoesDaDoacao(doacao)}</td>` : ''}
             </tr>`).join('')}
         </tbody>
       </table>

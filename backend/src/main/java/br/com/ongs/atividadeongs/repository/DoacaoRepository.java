@@ -20,7 +20,7 @@ public interface DoacaoRepository extends JpaRepository<Doacao, Long> {
     List<Doacao> findByStatus(StatusDoacao status);
 
     @Query("select coalesce(sum(d.valor), 0) from Doacao d " +
-            "where d.animal.id = :animalId and d.status <> :status")
+            "where d.animal.id = :animalId and d.status = :status")
     BigDecimal somarValorPorAnimal(@Param("animalId") Long animalId,
                                    @Param("status") StatusDoacao status);
 }
