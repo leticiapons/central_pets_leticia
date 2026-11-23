@@ -154,10 +154,10 @@ export async function reativarAnimal(id) {
   return http(`/animais/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'ATIVO' }) });
 }
 
-export async function inativarAnimal(id) {
+export async function inativarAnimal(id, motivo) {
   return USAR_MOCK
     ? mock.alterarStatusAnimal(id, 'INATIVO')
-    : http(`/animais/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'INATIVO' }) });
+    : http(`/animais/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'INATIVO', motivo }) });
 }
 
 export async function listarDoacoes(filtro = {}) {

@@ -72,7 +72,7 @@ public class AnimalController {
             @PathVariable Long id,
             @RequestBody AnimalStatusRequest dados) {
         Ong ong = authService.exigirOngDoUsuario(autorizacao);
-        return ResponseEntity.ok(service.atualizarStatus(id, dados.status(), ong));
+        return ResponseEntity.ok(service.atualizarStatus(id, dados.status(), dados.motivo(), ong));
     }
 
     @PostMapping("/{id}/padrinhos")

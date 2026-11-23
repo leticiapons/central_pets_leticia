@@ -6,6 +6,7 @@ import br.com.ongs.atividadeongs.exception.AcessoNegadoException;
 import br.com.ongs.atividadeongs.exception.RecursoNaoEncontradoException;
 import br.com.ongs.atividadeongs.exception.RegraNegocioException;
 import br.com.ongs.atividadeongs.models.Animal;
+import br.com.ongs.atividadeongs.models.MotivoInativacao;
 import br.com.ongs.atividadeongs.models.Ong;
 import br.com.ongs.atividadeongs.models.PerfilUsuario;
 import br.com.ongs.atividadeongs.models.StatusAnimal;
@@ -106,13 +107,18 @@ public class AnimalService {
     }
 
     @Transactional
-    public AnimalResponse atualizarStatus(Long id, StatusAnimal novoStatus, Ong ong) {
+    public AnimalResponse atualizarStatus(Long id, StatusAnimal novoStatus, MotivoInativacao motivo, Ong ong) {
         if (novoStatus == null) {
             throw new IllegalArgumentException("O status é obrigatório.");
+        }
+        if (novoStatus == StatusAnimal.INATIVO && motivo == null) {
+            throw new IllegalArgumentException("Informe o motivo da inativação.");
         }
         Animal animal = buscarEntidade(id);
         exigirDono(animal, ong);
         animal.setStatus(novoStatus);
+        // O motivo só existe enquanto o animal está inativo.
+        animal.setMotivoInativacao(novoStatus == StatusAnimal.INATIVO ? motivo : null);
         return toResponse(animal);
     }
 
@@ -260,6 +266,7 @@ public class AnimalService {
                 padrinhoIds, a.getMensalidadeSugerida(),
                 arrecadado, percentual, atingida, a.getFotoUrl(),
                 a.getOng() == null ? null : a.getOng().getId(),
-                a.getOng() == null ? null : a.getOng().getNome());
+                a.getOng() == null ? null : a.getOng().getNome(),
+                a.getMotivoInativacao());
     }
 }

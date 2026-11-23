@@ -2,6 +2,7 @@ package br.com.ongs.atividadeongs.config;
 
 import br.com.ongs.atividadeongs.models.Animal;
 import br.com.ongs.atividadeongs.models.Doacao;
+import br.com.ongs.atividadeongs.models.MotivoInativacao;
 import br.com.ongs.atividadeongs.models.Ong;
 import br.com.ongs.atividadeongs.models.PerfilUsuario;
 import br.com.ongs.atividadeongs.models.StatusAnimal;
@@ -268,6 +269,9 @@ public class DataInitializer implements CommandLineRunner {
                 "Bob é um senhorzinho calmo e companheiro. Já conseguiu o dinheiro do tratamento dentário e agora aguarda um novo lar.",
                 "600.00", "50.00", StatusAnimal.INATIVO, "img/animais/bob.svg",
                 List.of("Tratamento dentário"));
+
+        bob.setMotivoInativacao(MotivoInativacao.META_ATINGIDA);
+        animalRepository.save(bob);
 
         Animal nina = criarAnimal(patasFelizes, "Nina", "Cachorro", "6 meses",
                 "Nina é uma filhote curiosa, resgatada junto com os irmãos. Precisa completar o ciclo de vacinas e de ração para filhotes.",

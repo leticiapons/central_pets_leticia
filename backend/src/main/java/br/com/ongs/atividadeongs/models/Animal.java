@@ -63,6 +63,11 @@ public class Animal {
     @Column(name = "foto_url", columnDefinition = "TEXT")
     private String fotoUrl;
 
+    // Preenchido só quando o animal está inativo: por que a campanha foi encerrada.
+    @Enumerated(EnumType.STRING)
+    @Column(name = "motivo_inativacao", length = 30)
+    private MotivoInativacao motivoInativacao;
+
     // ONG, protetor ou pessoa responsável pela campanha deste animal.
     @ManyToOne
     @JoinColumn(name = "ong_id")
@@ -150,6 +155,14 @@ public class Animal {
 
     public void setMensalidadeSugerida(BigDecimal mensalidadeSugerida) {
         this.mensalidadeSugerida = mensalidadeSugerida;
+    }
+
+    public MotivoInativacao getMotivoInativacao() {
+        return motivoInativacao;
+    }
+
+    public void setMotivoInativacao(MotivoInativacao motivoInativacao) {
+        this.motivoInativacao = motivoInativacao;
     }
 
     public Ong getOng() {

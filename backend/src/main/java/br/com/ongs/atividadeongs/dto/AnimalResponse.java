@@ -1,5 +1,7 @@
 package br.com.ongs.atividadeongs.dto;
 
+import br.com.ongs.atividadeongs.models.MotivoInativacao;
+
 import br.com.ongs.atividadeongs.models.StatusAnimal;
 
 import java.math.BigDecimal;
@@ -21,5 +23,6 @@ public record AnimalResponse(
         boolean metaAtingida,
         String fotoUrl,
         Long ongId,
-        String ongNome) {
+        String ongNome,
+        MotivoInativacao motivoInativacao) {
 }

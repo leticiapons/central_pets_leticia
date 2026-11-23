@@ -2,7 +2,7 @@ import * as api from '../api.js';
 import { mesmoId } from '../ids.js';
 import {
   esc, fmtMoeda, fmtData, animalCard, abrirModal,
-  toast, confirmar, statusDoacaoBadge
+  toast, confirmar, statusDoacaoBadge, fecharModal, MOTIVOS_INATIVACAO
 } from '../components.js';
 import { lerImagemRedimensionada } from '../imagem.js';
 import { getUsuarioLogado, atualizarUsuarioLogado } from '../state.js';
@@ -178,16 +178,11 @@ function renderAnimais(container, contexto) {
     botao.addEventListener('click', async () => {
       const animal = animais.find((item) => mesmoId(item.id, botao.dataset.inativar));
       if (!animal) return;
-      const confirmou = await confirmar({
-        titulo: 'Inativar animal',
-        mensagem: `Inativar ${animal.nome}? Ele deixará de aparecer para novas doações, mas o histórico permanece.`,
-        textoConfirmar: 'Inativar',
-        perigo: true
-      });
-      if (!confirmou) return;
+      const motivo = await escolherMotivo(animal);
+      if (!motivo) return;
 
       try {
-        await api.inativarAnimal(animal.id);
+        await api.inativarAnimal(animal.id, motivo);
         toast(`${animal.nome} foi inativado.`);
         await renderAdm(contexto.app);
       } catch (erro) {
@@ -300,6 +295,43 @@ function renderNovoAnimal(container, contexto) {
     } catch (erro) {
       toast(erro.message, 'erro');
     }
+  });
+}
+
+// Pergunta o motivo da inativação e devolve o motivo escolhido (ou null se cancelar).
+function escolherMotivo(animal) {
+  return new Promise((resolver) => {
+    abrirModal({
+      titulo: 'Inativar animal',
+      conteudo: `
+        <p>Inativar <strong>${esc(animal.nome)}</strong>? Ele deixará de aparecer para novas doações, mas o histórico permanece.</p>
+        <label class="field">
+          <span>Motivo</span>
+          <select id="motivo-inativacao">
+            <option value="">Escolha o motivo</option>
+            ${Object.entries(MOTIVOS_INATIVACAO).map(([valor, rotulo]) => `<option value="${valor}" ${animal.metaAtingida && valor === 'META_ATINGIDA' ? 'selected' : ''}>${rotulo}</option>`).join('')}
+          </select>
+        </label>
+        <div class="modal-actions">
+          <button class="btn btn-ghost" type="button" data-cancelar>Cancelar</button>
+          <button class="btn btn-danger" type="button" data-ok>Inativar</button>
+        </div>`,
+      onMount(modal) {
+        modal.querySelector('[data-cancelar]').addEventListener('click', () => {
+          fecharModal();
+          resolver(null);
+        });
+        modal.querySelector('[data-ok]').addEventListener('click', () => {
+          const escolhido = modal.querySelector('#motivo-inativacao').value;
+          if (!escolhido) {
+            toast('Escolha o motivo da inativação.', 'erro');
+            return;
+          }
+          fecharModal();
+          resolver(escolhido);
+        });
+      }
+    });
   });
 }
 

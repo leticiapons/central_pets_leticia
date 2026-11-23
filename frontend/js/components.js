@@ -30,6 +30,13 @@ export function fmtData(valor) {
   return data.toLocaleDateString('pt-BR');
 }
 
+export const MOTIVOS_INATIVACAO = {
+  ADOTADO: 'Adotado',
+  TRATAMENTO_CONCLUIDO: 'Tratamento concluído',
+  META_ATINGIDA: 'Meta atingida',
+  OUTRO: 'Outro motivo'
+};
+
 export function statusBadge(status) {
   return status === 'ATIVO'
     ? '<span class="badge badge-ok">Ativo</span>'
@@ -73,6 +80,7 @@ export function animalCard(animal, { acoes = '' } = {}) {
           <h3>${esc(animal.nome)}</h3>
           <p class="muted">${esc(animal.especie)} · ${esc(animal.idade)}</p>
           ${animal.ongNome ? `<p class="muted small animal-ong">${esc(animal.ongNome)}</p>` : ''}
+          ${animal.status !== 'ATIVO' ? `<p class="muted small animal-ong">Inativo: ${esc(MOTIVOS_INATIVACAO[animal.motivoInativacao] || 'motivo não informado')}</p>` : ''}
         </div>
         ${statusBadge(animal.status)}
       </div>
