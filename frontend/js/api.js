@@ -155,12 +155,6 @@ export async function reativarAnimal(id) {
 }
 
 export async function inativarAnimal(id) {
-  const animal = await obterAnimal(id);
-  if (!animal) throw new Error('Animal não encontrado.');
-  if (!animal.metaAtingida) {
-    throw new Error('Só é possível inativar animais que atingiram a meta de doações.');
-  }
-
   return USAR_MOCK
     ? mock.alterarStatusAnimal(id, 'INATIVO')
     : http(`/animais/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'INATIVO' }) });

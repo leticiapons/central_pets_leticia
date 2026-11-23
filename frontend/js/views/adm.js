@@ -122,8 +122,7 @@ function renderAnimais(container, contexto) {
       <button class="btn btn-sm btn-ghost" type="button" data-ver="${esc(animal.id)}">Ver doações</button>
       <button class="btn btn-sm btn-ghost" type="button" data-editar="${esc(animal.id)}">Editar</button>
       ${animal.status === 'ATIVO'
-        ? `<button class="btn btn-sm ${animal.metaAtingida ? 'btn-danger' : 'btn-disabled'}" type="button"
-                  data-inativar="${esc(animal.id)}" ${animal.metaAtingida ? '' : 'disabled title="Disponível quando a meta for atingida"'}>Inativar</button>`
+        ? `<button class="btn btn-sm btn-danger" type="button" data-inativar="${esc(animal.id)}">Inativar</button>`
         : `<button class="btn btn-sm btn-primary" type="button" data-reativar="${esc(animal.id)}">Reativar</button>`}`
   })).join('')}</div>`;
 

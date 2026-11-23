@@ -112,9 +112,6 @@ public class AnimalService {
         }
         Animal animal = buscarEntidade(id);
         exigirDono(animal, ong);
-        if (novoStatus == StatusAnimal.INATIVO && !calcularMetaAtingida(animal)) {
-            throw new RegraNegocioException("Só é possível inativar o animal quando a meta for atingida.");
-        }
         animal.setStatus(novoStatus);
         return toResponse(animal);
     }

@@ -265,7 +265,7 @@ public class DataInitializer implements CommandLineRunner {
                 List.of("Exames", "Castração"));
 
         Animal bob = criarAnimal(patasFelizes, "Bob", "Cachorro", "8 anos",
-                "Bob é um senhorzinho calmo e companheiro. Teve a meta de tratamento dentário atingida e está inativo por enquanto, aguardando um novo lar.",
+                "Bob é um senhorzinho calmo e companheiro. Já conseguiu o dinheiro do tratamento dentário e agora aguarda um novo lar.",
                 "600.00", "50.00", StatusAnimal.INATIVO, "img/animais/bob.svg",
                 List.of("Tratamento dentário"));
 
