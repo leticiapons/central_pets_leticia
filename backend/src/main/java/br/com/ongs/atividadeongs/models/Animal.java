@@ -14,9 +14,11 @@ import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OrderColumn;
+import jakarta.persistence.PrePersist;
 import jakarta.persistence.Table;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
@@ -62,6 +64,14 @@ public class Animal {
     // ou a própria imagem codificada (data:image/...) quando enviada pelo painel da ONG.
     @Column(name = "foto_url", columnDefinition = "TEXT")
     private String fotoUrl;
+
+    // Data em que o anúncio foi publicado. Só é definida na criação e nunca muda depois.
+    @Column(name = "data_cadastro")
+    private Instant dataCadastro;
+
+    // Caso urgente: aparece primeiro para os doadores e pode ser filtrado.
+    @Column(nullable = false, columnDefinition = "boolean default false")
+    private boolean urgente;
 
     // Preenchido só quando o animal está inativo: por que a campanha foi encerrada.
     @Enumerated(EnumType.STRING)
@@ -155,6 +165,29 @@ public class Animal {
 
     public void setMensalidadeSugerida(BigDecimal mensalidadeSugerida) {
         this.mensalidadeSugerida = mensalidadeSugerida;
+    }
+
+    @PrePersist
+    void definirDataDeCadastro() {
+        if (dataCadastro == null) {
+            dataCadastro = Instant.now();
+        }
+    }
+
+    public Instant getDataCadastro() {
+        return dataCadastro;
+    }
+
+    public void setDataCadastro(Instant dataCadastro) {
+        this.dataCadastro = dataCadastro;
+    }
+
+    public boolean isUrgente() {
+        return urgente;
+    }
+
+    public void setUrgente(boolean urgente) {
+        this.urgente = urgente;
     }
 
     public MotivoInativacao getMotivoInativacao() {

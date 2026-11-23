@@ -73,6 +73,21 @@ public class DataInitializer implements CommandLineRunner {
         vincularAnimaisSemOng(patasFelizes);
         criarOngsExtrasDeExemplo();
         garantirContasDeExemplo(patasFelizes);
+        preencherDatasDeCadastro();
+    }
+
+    /**
+     * Animais cadastrados antes de existir a data de publicação ficam sem data.
+     * Como a data real não é conhecida, eles recebem a data de hoje, uma única vez.
+     */
+    private void preencherDatasDeCadastro() {
+        Instant agora = Instant.now();
+        for (Animal animal : animalRepository.findAll()) {
+            if (animal.getDataCadastro() == null) {
+                animal.setDataCadastro(agora);
+                animalRepository.save(animal);
+            }
+        }
     }
 
     private Ong criarOngPadraoSeNecessario() {
@@ -182,6 +197,9 @@ public class DataInitializer implements CommandLineRunner {
                     "Frajola é um gato preto e branco, muito falante. Foi resgatado com uma infecção no ouvido e está em tratamento.",
                     "800.00", "35.00", StatusAnimal.ATIVO, "img/animais/frajola.svg",
                     List.of("Antibióticos", "Consultas veterinárias"));
+            frajola.setUrgente(true);
+            animalRepository.save(frajola);
+
             Animal mingau = criarAnimal(abrigo, "Mingau", "Gato", "8 meses",
                     "Mingau é um filhote branquinho e brincalhão, encontrado em uma caixa na chuva. Precisa de vacinas e castração.",
                     "650.00", "30.00", StatusAnimal.ATIVO, "img/animais/mingau.svg",
@@ -254,6 +272,9 @@ public class DataInitializer implements CommandLineRunner {
                 "Thor é um cachorro grande e muito dócil, encontrado vagando perto de uma estrada. Está se recuperando de uma cirurgia na pata e precisa de fisioterapia.",
                 "2200.00", "80.00", StatusAnimal.ATIVO, "img/animais/thor.svg",
                 List.of("Fisioterapia", "Medicamentos", "Ração"));
+
+        thor.setUrgente(true);
+        animalRepository.save(thor);
 
         Animal luna = criarAnimal(patasFelizes, "Luna", "Gato", "2 anos",
                 "Luna é uma gata tímida e muito esperta. Foi encontrada em uma caixa de papelão e já está vacinada. Procura um lar tranquilo e padrinhos para ajudar nos cuidados.",

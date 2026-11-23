@@ -205,6 +205,7 @@ function renderNovoAnimal(container, contexto) {
         <label class="field"><span>Meta de arrecadação (R$)</span><input name="meta" type="number" min="1" step="0.01" required placeholder="1200" value="${esc(animal ? animal.meta : '')}"></label>
         <label class="field full"><span>Descrição</span><textarea name="descricao" required placeholder="História e situação do animal">${esc(animal ? animal.descricao : '')}</textarea></label>
         <label class="field full"><span>Necessidades (separadas por vírgula)</span><input name="necessidades" placeholder="Ração, consultas, castração" value="${esc(animal ? (animal.necessidades || []).join(', ') : '')}"></label>
+        <label class="field-check full"><input name="urgente" type="checkbox" ${animal && animal.urgente ? 'checked' : ''}> Caso urgente (aparece primeiro para os doadores)</label>
         <label class="field full"><span>Foto do animal (opcional)</span><input name="foto" type="file" accept="image/*"></label>
         <div class="field full">
           <img id="previa-foto" class="animal-photo animal-photo-preview" alt="Prévia da foto" hidden>
@@ -278,6 +279,7 @@ function renderNovoAnimal(container, contexto) {
         .map((item) => item.trim())
         .filter(Boolean),
       mensalidadeSugerida: animal && animal.mensalidadeSugerida != null ? animal.mensalidadeSugerida : 50,
+      urgente: dados.urgente === 'on',
       fotoUrl
     };
 

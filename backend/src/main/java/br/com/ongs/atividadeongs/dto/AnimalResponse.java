@@ -5,6 +5,7 @@ import br.com.ongs.atividadeongs.models.MotivoInativacao;
 import br.com.ongs.atividadeongs.models.StatusAnimal;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 
 public record AnimalResponse(
@@ -24,5 +25,7 @@ public record AnimalResponse(
         String fotoUrl,
         Long ongId,
         String ongNome,
-        MotivoInativacao motivoInativacao) {
+        MotivoInativacao motivoInativacao,
+        boolean urgente,
+        Instant dataCadastro) {
 }

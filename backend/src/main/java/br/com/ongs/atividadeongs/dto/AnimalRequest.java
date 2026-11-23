@@ -14,5 +14,6 @@ public record AnimalRequest(
         List<String> necessidades,
         BigDecimal mensalidadeSugerida,
         StatusAnimal status,
-        String fotoUrl) {
+        String fotoUrl,
+        Boolean urgente) {
 }

@@ -80,6 +80,8 @@ export function animalCard(animal, { acoes = '' } = {}) {
           <h3>${esc(animal.nome)}</h3>
           <p class="muted">${esc(animal.especie)} · ${esc(animal.idade)}</p>
           ${animal.ongNome ? `<p class="muted small animal-ong">${esc(animal.ongNome)}</p>` : ''}
+          ${animal.dataCadastro ? `<p class="muted small animal-ong">Publicado em ${fmtData(animal.dataCadastro)}</p>` : ''}
+          ${animal.urgente && animal.status === 'ATIVO' ? '<span class="badge badge-urgente">Urgente</span>' : ''}
           ${animal.status !== 'ATIVO' ? `<p class="muted small animal-ong">Inativo: ${esc(MOTIVOS_INATIVACAO[animal.motivoInativacao] || 'motivo não informado')}</p>` : ''}
         </div>
         ${statusBadge(animal.status)}

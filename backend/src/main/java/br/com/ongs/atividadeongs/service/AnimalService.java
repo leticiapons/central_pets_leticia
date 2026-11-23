@@ -104,6 +104,7 @@ public class AnimalService {
         animal.setMensalidadeSugerida(req.mensalidadeSugerida());
         animal.setNecessidades(validarNecessidades(req.necessidades()));
         animal.setFotoUrl(validarFoto(req.fotoUrl()));
+        animal.setUrgente(Boolean.TRUE.equals(req.urgente()));
     }
 
     @Transactional
@@ -267,6 +268,8 @@ public class AnimalService {
                 arrecadado, percentual, atingida, a.getFotoUrl(),
                 a.getOng() == null ? null : a.getOng().getId(),
                 a.getOng() == null ? null : a.getOng().getNome(),
-                a.getMotivoInativacao());
+                a.getMotivoInativacao(),
+                a.isUrgente(),
+                a.getDataCadastro());
     }
 }

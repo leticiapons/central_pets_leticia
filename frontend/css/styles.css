@@ -991,3 +991,54 @@ body.modal-aberto {
 .acoes-doacao .btn {
   margin-right: 0.25rem;
 }
+
+
+/* ---------- PIX copia e cola e QR Code ---------- */
+
+.pix-qr {
+  margin: 1rem 0;
+  text-align: center;
+}
+
+.pix-qr svg {
+  max-width: 100%;
+  height: auto;
+  border: 1px solid var(--border, #e3e7e4);
+  border-radius: 12px;
+}
+
+.pix-qr textarea {
+  width: 100%;
+  margin: 0.5rem 0;
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 0.75rem;
+  resize: none;
+}
+
+
+/* ---------- Filtros da lista de animais ---------- */
+
+.filtros-animais {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(190px, 1fr));
+  gap: 1rem;
+  align-items: end;
+  margin-bottom: 0.75rem;
+  padding: 1rem;
+}
+
+.field-check {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+}
+
+.filtros-resumo {
+  margin: 0 0 1rem;
+}
+
+.badge-urgente {
+  background: #fde2e0;
+  color: #9b1c1c;
+}
