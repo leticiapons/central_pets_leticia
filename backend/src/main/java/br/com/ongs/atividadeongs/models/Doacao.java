@@ -36,6 +36,11 @@ public class Doacao {
     @JoinColumn(name = "padrinho_id")
     private Usuario padrinho;
 
+    // Conta de quem fez a doação (doador ou padrinho), usada para mostrar "Minhas doações".
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "doador_id")
+    private Usuario doador;
+
     @Column(name = "doador_nome", nullable = false, length = 120)
     private String doadorNome;
 
@@ -84,6 +89,14 @@ public class Doacao {
 
     public void setPerfil(PerfilUsuario perfil) {
         this.perfil = perfil;
+    }
+
+    public Usuario getDoador() {
+        return doador;
+    }
+
+    public void setDoador(Usuario doador) {
+        this.doador = doador;
     }
 
     public Usuario getPadrinho() {

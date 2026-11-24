@@ -80,6 +80,68 @@ public class DataInitializer implements CommandLineRunner {
         garantirContasDeExemplo(patasFelizes);
         preencherDatasDeCadastro();
         criarAtualizacoesDeExemploSeNecessario();
+        vincularDoacoesAosDoadores();
+        criarDoacoesDoDoadorDeExemploSeNecessario();
+    }
+
+    /**
+     * Doações feitas antes de existir "Minhas doações" não tinham a conta de quem doou.
+     * Padrinhos já têm a ligação pelo próprio padrinho; as doações do doador de exemplo
+     * são reconhecidas pelo nome da conta. As demais continuam sem ligação.
+     */
+    private void vincularDoacoesAosDoadores() {
+        Usuario doadorDeExemplo = usuarioRepository.findByEmailIgnoreCase(DOADOR_EMAIL).orElse(null);
+
+        for (Doacao doacao : doacaoRepository.findAll()) {
+            if (doacao.getDoador() != null) {
+                continue;
+            }
+            if (doacao.getPadrinho() != null) {
+                doacao.setDoador(doacao.getPadrinho());
+                doacaoRepository.save(doacao);
+            } else if (doadorDeExemplo != null
+                    && doacao.getPerfil() == PerfilUsuario.USUARIO
+                    && doadorDeExemplo.getNome().equals(doacao.getDoadorNome())) {
+                doacao.setDoador(doadorDeExemplo);
+                doacaoRepository.save(doacao);
+            }
+        }
+    }
+
+    /** Dá ao doador de exemplo algumas doações fictícias, se ele ainda não tiver nenhuma. */
+    private void criarDoacoesDoDoadorDeExemploSeNecessario() {
+        Usuario doadorDeExemplo = usuarioRepository.findByEmailIgnoreCase(DOADOR_EMAIL).orElse(null);
+        if (doadorDeExemplo == null) {
+            return;
+        }
+
+        boolean jaTemDoacoes = doacaoRepository.findAll().stream()
+                .anyMatch(d -> d.getDoador() != null
+                        && java.util.Objects.equals(d.getDoador().getId(), doadorDeExemplo.getId()));
+        if (jaTemDoacoes) {
+            return;
+        }
+
+        doarComo(doadorDeExemplo, "Mel", "50.00", 20, StatusDoacao.DOADO);
+        doarComo(doadorDeExemplo, "Caramelo", "40.00", 8, StatusDoacao.DOADO);
+        doarComo(doadorDeExemplo, "Frajola", "30.00", 1, StatusDoacao.PENDENTE);
+    }
+
+    private void doarComo(Usuario doador, String nomeDoAnimal, String valor, int diasAtras, StatusDoacao status) {
+        animalRepository.findAll().stream()
+                .filter(animal -> nomeDoAnimal.equals(animal.getNome()))
+                .findFirst()
+                .ifPresent(animal -> {
+                    Doacao doacao = new Doacao();
+                    doacao.setAnimal(animal);
+                    doacao.setPerfil(PerfilUsuario.USUARIO);
+                    doacao.setDoador(doador);
+                    doacao.setDoadorNome(doador.getNome());
+                    doacao.setValor(new BigDecimal(valor));
+                    doacao.setData(Instant.now().minus(diasAtras, ChronoUnit.DAYS));
+                    doacao.setStatus(status);
+                    doacaoRepository.save(doacao);
+                });
     }
 
     /** Novidades fictícias em alguns animais de exemplo. Só são criadas se ainda não houver nenhuma. */

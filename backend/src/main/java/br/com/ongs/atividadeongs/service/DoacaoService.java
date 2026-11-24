@@ -45,10 +45,11 @@ public class DoacaoService {
     }
 
     @Transactional(readOnly = true)
-    public List<DoacaoResponse> listarPorPadrinho(Long padrinhoId) {
+    public List<DoacaoResponse> listarDoUsuario(Long usuarioId) {
         return doacaoRepository.findAll()
                 .stream()
-                .filter(d -> d.getPadrinho() != null && Objects.equals(d.getPadrinho().getId(), padrinhoId))
+                .filter(d -> (d.getDoador() != null && Objects.equals(d.getDoador().getId(), usuarioId))
+                        || (d.getPadrinho() != null && Objects.equals(d.getPadrinho().getId(), usuarioId)))
                 .map(this::toResponse)
                 .toList();
     }
@@ -82,12 +83,9 @@ public class DoacaoService {
         }
 
         PerfilUsuario perfil = doador.getPerfil();
-        Usuario padrinho = null;
-
-        if (perfil == PerfilUsuario.PADRINHO) {
-            padrinho = usuarioRepository.findById(doador.getId())
-                    .orElseThrow(() -> new RecursoNaoEncontradoException("Padrinho não encontrado."));
-        }
+        Usuario quemDoou = usuarioRepository.findById(doador.getId())
+                .orElseThrow(() -> new RecursoNaoEncontradoException("Doador não encontrado."));
+        Usuario padrinho = perfil == PerfilUsuario.PADRINHO ? quemDoou : null;
 
         String nome = dados.doadorNome();
 
@@ -105,6 +103,7 @@ public class DoacaoService {
         doacao.setAnimal(animal);
         doacao.setPerfil(perfil);
         doacao.setPadrinho(padrinho);
+        doacao.setDoador(quemDoou);
         doacao.setDoadorNome(nome);
         doacao.setValor(valor);
         doacao.setData(Instant.now());

@@ -82,6 +82,7 @@ export async function renderPadrinho(app) {
 
   registrarAnimais(animais, ongs);
   ligarDetalhes(app);
+  preencherUltimasAtualizacoes(app, afilhados);
 
   app.querySelectorAll('[data-padrinhar]').forEach((botao) => {
     botao.addEventListener('click', () => {
@@ -123,6 +124,30 @@ export async function renderPadrinho(app) {
   });
 }
 
+function resumir(texto, limite = 140) {
+  const limpo = String(texto || '').trim();
+  return limpo.length > limite ? `${limpo.slice(0, limite).trim()}…` : limpo;
+}
+
+// Mostra, em cada card de afilhado, a novidade mais recente publicada por quem cuida dele.
+function preencherUltimasAtualizacoes(app, afilhados) {
+  afilhados.forEach((animal) => {
+    const alvo = app.querySelector(`[data-ultima="${animal.id}"]`);
+    if (!alvo) return;
+
+    api.listarAtualizacoes(animal.id)
+      .then((lista) => {
+        alvo.innerHTML = lista.length
+          ? `<p class="muted small">Última atualização · ${fmtData(lista[0].dataPublicacao)}</p>
+             <p class="ultima-texto">${esc(resumir(lista[0].texto))}</p>`
+          : '<p class="muted small">Ainda não há atualizações.</p>';
+      })
+      .catch(() => {
+        alvo.innerHTML = '';
+      });
+  });
+}
+
 function cardAfilhado(animal) {
   const inativo = animal.status !== 'ATIVO';
   const necessidades = (animal.necessidades || [])
@@ -140,17 +165,21 @@ function cardAfilhado(animal) {
         </div>
         ${statusBadge(animal.status)}
       </div>
-      <p class="animal-desc">${esc(animal.descricao)}</p>
+      <p class="animal-desc animal-desc-resumo">${esc(animal.descricao)}</p>
       ${barraProgresso(animal)}
       <div class="needs">
         <h4>Necessidades</h4>
         <ul class="needs-list">${necessidades}</ul>
       </div>
       <p class="muted small">Apadrinhado por você · ${esc(animal.ongNome || 'ONG')}</p>
+      <div class="ultima-atualizacao" data-ultima="${esc(animal.id)}">
+        <p class="muted small">Buscando a última atualização…</p>
+      </div>
       <div class="card-actions">
+        <button class="btn btn-ghost btn-sm" type="button" data-detalhes="${esc(animal.id)}">Ver detalhes</button>
         <button class="btn btn-primary btn-sm" type="button" data-padrinhar="${esc(animal.id)}" ${inativo ? 'disabled' : ''}>
           ${inativo
-            ? 'Meta concluída'
+            ? 'Campanha encerrada'
             : `Doar mensalidade${animal.mensalidadeSugerida ? ` (${fmtMoeda(animal.mensalidadeSugerida)})` : ''}`}
         </button>
       </div>

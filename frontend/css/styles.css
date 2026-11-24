@@ -1099,3 +1099,23 @@ body.modal-aberto {
   -webkit-box-orient: vertical;
   overflow: hidden;
 }
+
+
+/* ---------- Última atualização no card do afilhado ---------- */
+
+.ultima-atualizacao {
+  margin: 0.5rem 0;
+  padding: 0.5rem 0.75rem;
+  border-left: 3px solid var(--primary, #2f7d57);
+  background: var(--primary-soft, #eef6f1);
+  border-radius: 8px;
+}
+
+.ultima-atualizacao p {
+  margin: 0;
+}
+
+.ultima-texto {
+  margin-top: 0.25rem !important;
+  white-space: pre-line;
+}

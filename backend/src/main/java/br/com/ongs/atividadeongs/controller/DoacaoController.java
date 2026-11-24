@@ -27,12 +27,15 @@ public class DoacaoController {
         this.authService = authService;
     }
 
-    /** Histórico de doações do padrinho que está logado. */
+    /** Histórico de doações de quem está logado (doador ou padrinho). */
     @GetMapping("/minhas")
     public ResponseEntity<List<DoacaoResponse>> minhas(
             @RequestHeader(value = "Authorization", required = false) String autorizacao) {
-        Usuario padrinho = authService.exigirUsuario(autorizacao, PerfilUsuario.PADRINHO);
-        return ResponseEntity.ok(doacaoService.listarPorPadrinho(padrinho.getId()));
+        Usuario quem = authService.exigirUsuario(autorizacao, null);
+        if (quem.getPerfil() == PerfilUsuario.ADM) {
+            throw new AcessoNegadoException("Contas de ONG ou protetor veem as doações recebidas no painel.");
+        }
+        return ResponseEntity.ok(doacaoService.listarDoUsuario(quem.getId()));
     }
 
     /** A ONG ou protetor confirma, recusa ou desfaz o recebimento de uma doação. */
