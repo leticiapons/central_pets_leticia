@@ -10,26 +10,6 @@ import { getUsuarioLogado } from '../state.js';
 const filtros = filtrosIniciais();
 let abaAtiva = 'animais';
 
-// Para cada animal, diz se a pessoa já ajudou ('confirmada') ou se há só doação aguardando ('pendente').
-export function mapaDeAjuda(doacoes) {
-  const ajuda = new Map();
-  doacoes.forEach((doacao) => {
-    const id = String(doacao.animalId);
-    if (doacao.status === 'DOADO') {
-      ajuda.set(id, 'confirmada');
-    } else if (doacao.status === 'PENDENTE' && ajuda.get(id) !== 'confirmada') {
-      ajuda.set(id, 'pendente');
-    }
-  });
-  return ajuda;
-}
-
-function seloDeAjuda(situacao) {
-  if (situacao === 'confirmada') return '<span class="badge badge-ok">Você já ajudou</span>';
-  if (situacao === 'pendente') return '<span class="badge badge-warn">Sua doação aguarda confirmação</span>';
-  return '';
-}
-
 export async function renderUsuario(app) {
   const [ongs, todos, doacoes] = await Promise.all([
     api.listarOngs(),
@@ -38,7 +18,6 @@ export async function renderUsuario(app) {
   ]);
   const animais = todos.filter((animal) => animal.status === 'ATIVO');
   const mapaOngs = new Map(ongs.map((ong) => [String(ong.id), ong]));
-  const ajuda = mapaDeAjuda(doacoes);
   const pendentes = doacoes.filter((doacao) => doacao.status === 'PENDENTE').length;
 
   registrarAnimais(todos, ongs);
@@ -69,7 +48,7 @@ export async function renderUsuario(app) {
     if (aba === 'doacoes') {
       renderMinhasDoacoes(conteudo, doacoes, todos);
     } else {
-      renderAnimaisParaAjudar(app, conteudo, { animais, mapaOngs, ajuda });
+      renderAnimaisParaAjudar(app, conteudo, { animais, mapaOngs });
     }
   };
 
@@ -77,7 +56,7 @@ export async function renderUsuario(app) {
   ativar(abaAtiva);
 }
 
-function renderAnimaisParaAjudar(app, conteudo, { animais, mapaOngs, ajuda }) {
+function renderAnimaisParaAjudar(app, conteudo, { animais, mapaOngs }) {
   if (!animais.length) {
     conteudo.innerHTML = '<div class="empty-state"><p>Nenhum animal ativo para doação.</p></div>';
     return;
@@ -97,7 +76,6 @@ function renderAnimaisParaAjudar(app, conteudo, { animais, mapaOngs, ajuda }) {
 
     lista.innerHTML = visiveis.length
       ? `<div class="grid">${visiveis.map((animal) => animalCard(animal, {
-        selo: seloDeAjuda(ajuda.get(String(animal.id))),
         acoes: `<button class="btn btn-primary btn-sm" type="button" data-doar="${esc(animal.id)}">Doar para ${esc(animal.nome)}</button>`
       })).join('')}</div>`
       : '<div class="empty-state"><p>Nenhum animal encontrado com esses filtros.</p></div>';

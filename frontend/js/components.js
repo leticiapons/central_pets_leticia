@@ -70,7 +70,7 @@ export function fotoAnimal(animal, classe = '') {
   return `<img class="animal-photo ${classe}" src="${esc(animal.fotoUrl)}" alt="Foto de ${esc(animal.nome)}" loading="lazy" onerror="this.remove()">`;
 }
 
-export function animalCard(animal, { acoes = '', selo = '' } = {}) {
+export function animalCard(animal, { acoes = '' } = {}) {
   return `
     <article class="card animal-card">
       ${fotoAnimal(animal)}
@@ -81,7 +81,6 @@ export function animalCard(animal, { acoes = '', selo = '' } = {}) {
           <p class="muted">${esc(animal.especie)} · ${esc(animal.idade)}</p>
           ${animal.ongNome ? `<p class="muted small animal-ong">${esc(animal.ongNome)}</p>` : ''}
           ${animal.dataCadastro ? `<p class="muted small animal-ong">Publicado em ${fmtData(animal.dataCadastro)}</p>` : ''}
-          ${selo}
           ${animal.urgente && animal.status === 'ATIVO' ? '<span class="badge badge-urgente">Urgente</span>' : ''}
           ${animal.status !== 'ATIVO' ? `<p class="muted small animal-ong">Inativo: ${esc(MOTIVOS_INATIVACAO[animal.motivoInativacao] || 'motivo não informado')}</p>` : ''}
         </div>
