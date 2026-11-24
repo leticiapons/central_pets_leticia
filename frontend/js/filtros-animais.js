@@ -11,6 +11,12 @@ const FALTAS = {
 };
 
 // A ordem de cadastro é a ordem em que os animais foram publicados no site (do número de cada um).
+const SITUACOES = {
+  todas: 'Todos',
+  ATIVO: 'Ativos',
+  INATIVO: 'Inativos'
+};
+
 const ORDENACOES = {
   recentes: 'Mais recentes primeiro',
   antigos: 'Mais antigos primeiro',
@@ -22,7 +28,7 @@ const ORDENACOES = {
 };
 
 export function filtrosIniciais() {
-  return { busca: '', especie: 'todas', ong: 'todas', falta: 'todas', urgentes: false, ordem: '' };
+  return { busca: '', especie: 'todas', ong: 'todas', situacao: 'todas', falta: 'todas', urgentes: false, ordem: '' };
 }
 
 function normalizar(texto) {
@@ -47,6 +53,7 @@ export function aplicarFiltros(animais, filtros) {
     }
     if (filtros.especie !== 'todas' && chaveEspecie(animal) !== filtros.especie) return false;
     if (filtros.ong !== 'todas' && String(animal.ongId) !== filtros.ong) return false;
+    if (filtros.situacao !== 'todas' && animal.status !== filtros.situacao) return false;
     if (filtros.urgentes && !animal.urgente) return false;
 
     const falta = faltaDe(animal);
@@ -85,7 +92,8 @@ function opcoesDoObjeto(objeto, selecionado) {
     .join('');
 }
 
-export function htmlFiltros(animais, filtros) {
+// opcoes.campanha: mostra o filtro de campanha (tela do doador). opcoes.situacao: mostra ativos/inativos (painel de quem cuida).
+export function htmlFiltros(animais, filtros, { campanha = true, situacao = false } = {}) {
   const especies = new Map();
   const campanhas = new Map();
 
@@ -103,9 +111,12 @@ export function htmlFiltros(animais, filtros) {
       <label class="field"><span>Espécie</span>
         <select id="f-especie"><option value="todas">Todas</option>${opcoesDoMapa(especies, filtros.especie)}</select>
       </label>
-      <label class="field"><span>Campanha</span>
+      ${campanha ? `<label class="field"><span>Campanha</span>
         <select id="f-ong"><option value="todas">Todas</option>${opcoesDoMapa(campanhas, filtros.ong)}</select>
-      </label>
+      </label>` : ''}
+      ${situacao ? `<label class="field"><span>Situação</span>
+        <select id="f-situacao">${opcoesDoObjeto(SITUACOES, filtros.situacao)}</select>
+      </label>` : ''}
       <label class="field"><span>Quanto falta</span>
         <select id="f-falta">${opcoesDoObjeto(FALTAS, filtros.falta)}</select>
       </label>
@@ -123,6 +134,7 @@ export function ligarFiltros(container, filtros, aoMudar) {
     busca: container.querySelector('#f-busca'),
     especie: container.querySelector('#f-especie'),
     ong: container.querySelector('#f-ong'),
+    situacao: container.querySelector('#f-situacao'),
     falta: container.querySelector('#f-falta'),
     ordem: container.querySelector('#f-ordem'),
     urgentes: container.querySelector('#f-urgentes')
@@ -131,7 +143,8 @@ export function ligarFiltros(container, filtros, aoMudar) {
   const ler = () => {
     filtros.busca = campos.busca.value;
     filtros.especie = campos.especie.value;
-    filtros.ong = campos.ong.value;
+    if (campos.ong) filtros.ong = campos.ong.value;
+    if (campos.situacao) filtros.situacao = campos.situacao.value;
     filtros.falta = campos.falta.value;
     filtros.ordem = campos.ordem.value;
     filtros.urgentes = campos.urgentes.checked;
@@ -139,14 +152,16 @@ export function ligarFiltros(container, filtros, aoMudar) {
   };
 
   campos.busca.addEventListener('input', ler);
-  [campos.especie, campos.ong, campos.falta, campos.ordem, campos.urgentes]
+  [campos.especie, campos.ong, campos.situacao, campos.falta, campos.ordem, campos.urgentes]
+    .filter(Boolean)
     .forEach((campo) => campo.addEventListener('change', ler));
 
   container.querySelector('#f-limpar').addEventListener('click', () => {
     const inicial = filtrosIniciais();
     campos.busca.value = inicial.busca;
     campos.especie.value = inicial.especie;
-    campos.ong.value = inicial.ong;
+    if (campos.ong) campos.ong.value = inicial.ong;
+    if (campos.situacao) campos.situacao.value = inicial.situacao;
     campos.falta.value = inicial.falta;
     campos.ordem.value = inicial.ordem;
     campos.urgentes.checked = inicial.urgentes;

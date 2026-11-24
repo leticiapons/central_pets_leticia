@@ -86,9 +86,12 @@ export function animalCard(animal, { acoes = '' } = {}) {
         </div>
         ${statusBadge(animal.status)}
       </div>
-      <p class="animal-desc">${esc(animal.descricao)}</p>
+      <p class="animal-desc animal-desc-resumo">${esc(animal.descricao)}</p>
       ${barraProgresso(animal)}
-      ${acoes ? `<div class="card-actions">${acoes}</div>` : ''}
+      <div class="card-actions">
+        <button class="btn btn-sm btn-ghost" type="button" data-detalhes="${esc(animal.id)}">Ver detalhes</button>
+        ${acoes}
+      </div>
     </article>`;
 }
 

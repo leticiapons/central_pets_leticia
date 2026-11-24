@@ -181,6 +181,25 @@ export async function atualizarStatusDoacao(id, status) {
   return http(`/doacoes/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status }) });
 }
 
+export async function listarAtualizacoes(animalId) {
+  if (USAR_MOCK) return [];
+  return http(`/animais/${animalId}/atualizacoes`);
+}
+
+export async function publicarAtualizacao(animalId, dados) {
+  if (USAR_MOCK) {
+    throw new Error('As atualizações estão disponíveis apenas com a API real.');
+  }
+  return http(`/animais/${animalId}/atualizacoes`, { method: 'POST', body: JSON.stringify(dados) });
+}
+
+export async function excluirAtualizacao(animalId, atualizacaoId) {
+  if (USAR_MOCK) {
+    throw new Error('As atualizações estão disponíveis apenas com a API real.');
+  }
+  return http(`/animais/${animalId}/atualizacoes/${atualizacaoId}`, { method: 'DELETE' });
+}
+
 export async function criarDoacao(dados) {
   const payload = { ...dados };
 

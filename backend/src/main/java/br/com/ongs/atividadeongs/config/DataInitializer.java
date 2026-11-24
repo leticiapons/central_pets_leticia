@@ -1,6 +1,7 @@
 package br.com.ongs.atividadeongs.config;
 
 import br.com.ongs.atividadeongs.models.Animal;
+import br.com.ongs.atividadeongs.models.AnimalAtualizacao;
 import br.com.ongs.atividadeongs.models.Doacao;
 import br.com.ongs.atividadeongs.models.MotivoInativacao;
 import br.com.ongs.atividadeongs.models.Ong;
@@ -9,6 +10,7 @@ import br.com.ongs.atividadeongs.models.StatusAnimal;
 import br.com.ongs.atividadeongs.models.StatusDoacao;
 import br.com.ongs.atividadeongs.models.TipoChavePix;
 import br.com.ongs.atividadeongs.models.Usuario;
+import br.com.ongs.atividadeongs.repository.AnimalAtualizacaoRepository;
 import br.com.ongs.atividadeongs.repository.AnimalRepository;
 import br.com.ongs.atividadeongs.repository.DoacaoRepository;
 import br.com.ongs.atividadeongs.repository.OngRepository;
@@ -51,17 +53,20 @@ public class DataInitializer implements CommandLineRunner {
     private final AnimalRepository animalRepository;
     private final DoacaoRepository doacaoRepository;
     private final SenhaService senhaService;
+    private final AnimalAtualizacaoRepository atualizacaoRepository;
 
     public DataInitializer(OngRepository ongRepository,
                            UsuarioRepository usuarioRepository,
                            AnimalRepository animalRepository,
                            DoacaoRepository doacaoRepository,
-                           SenhaService senhaService) {
+                           SenhaService senhaService,
+                           AnimalAtualizacaoRepository atualizacaoRepository) {
         this.ongRepository = ongRepository;
         this.usuarioRepository = usuarioRepository;
         this.animalRepository = animalRepository;
         this.doacaoRepository = doacaoRepository;
         this.senhaService = senhaService;
+        this.atualizacaoRepository = atualizacaoRepository;
     }
 
     @Override
@@ -74,6 +79,33 @@ public class DataInitializer implements CommandLineRunner {
         criarOngsExtrasDeExemplo();
         garantirContasDeExemplo(patasFelizes);
         preencherDatasDeCadastro();
+        criarAtualizacoesDeExemploSeNecessario();
+    }
+
+    /** Novidades fictícias em alguns animais de exemplo. Só são criadas se ainda não houver nenhuma. */
+    private void criarAtualizacoesDeExemploSeNecessario() {
+        if (atualizacaoRepository.count() > 0) {
+            return;
+        }
+
+        atualizar("Thor", 12, "Thor fez a cirurgia na pata e foi muito bem! Agora ele descansa e começa a fisioterapia na semana que vem.");
+        atualizar("Thor", 4, "Primeira sessão de fisioterapia concluída. Ele já apoia a pata e está de bom humor.");
+        atualizar("Mel", 9, "Mel tomou o tratamento contra carrapatos e está brincando bastante com a bolinha.");
+        atualizar("Frajola", 6, "O ouvido do Frajola está melhorando com o antibiótico. Ele continua muito falante.");
+        atualizar("Caramelo", 3, "Caramelo ganhou uma caminha nova e já está andando sem dificuldade.");
+    }
+
+    private void atualizar(String nomeDoAnimal, int diasAtras, String texto) {
+        animalRepository.findAll().stream()
+                .filter(animal -> nomeDoAnimal.equals(animal.getNome()))
+                .findFirst()
+                .ifPresent(animal -> {
+                    AnimalAtualizacao atualizacao = new AnimalAtualizacao();
+                    atualizacao.setAnimal(animal);
+                    atualizacao.setTexto(texto);
+                    atualizacao.setDataPublicacao(Instant.now().minus(diasAtras, ChronoUnit.DAYS));
+                    atualizacaoRepository.save(atualizacao);
+                });
     }
 
     /**

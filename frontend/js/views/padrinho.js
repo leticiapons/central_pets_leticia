@@ -6,6 +6,7 @@ import {
 import { abrirDoacao } from '../doacao-modal.js';
 import { mesmoId } from '../ids.js';
 import { getUsuarioLogado } from '../state.js';
+import { ligarDetalhes, registrarAnimais } from '../detalhes-animal.js';
 
 export async function renderPadrinho(app) {
   const [ongs, animais] = await Promise.all([
@@ -78,6 +79,9 @@ export async function renderPadrinho(app) {
     ${doacoes.length
       ? tabelaMinhasDoacoes(doacoes, mapaAnimais)
       : '<div class="empty-state"><p>Nenhuma doação registrada ainda.</p></div>'}`;
+
+  registrarAnimais(animais, ongs);
+  ligarDetalhes(app);
 
   app.querySelectorAll('[data-padrinhar]').forEach((botao) => {
     botao.addEventListener('click', () => {

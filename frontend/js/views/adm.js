@@ -5,6 +5,9 @@ import {
   toast, confirmar, statusDoacaoBadge, fecharModal, MOTIVOS_INATIVACAO
 } from '../components.js';
 import { lerImagemRedimensionada } from '../imagem.js';
+import { abrirGerenciadorAtualizacoes } from '../atualizacoes.js';
+import { aplicarFiltros, filtrosIniciais, htmlFiltros, ligarFiltros } from '../filtros-animais.js';
+import { ligarDetalhes, registrarAnimais } from '../detalhes-animal.js';
 import { getUsuarioLogado, atualizarUsuarioLogado } from '../state.js';
 
 const ROTULOS_ABA = {
@@ -34,6 +37,9 @@ const SITUACOES = {
   DOADO: 'Confirmadas',
   CANCELADA: 'Não recebidas'
 };
+
+// Os filtros do painel ficam guardados enquanto a pessoa navega pelas abas.
+const filtrosPainel = filtrosIniciais();
 
 let abaAtiva = 'animais';
 let filtroSituacao = 'todas';
@@ -117,79 +123,113 @@ function renderAnimais(container, contexto) {
     return;
   }
 
-  container.innerHTML = `<div class="grid">${animais.map((animal) => animalCard(animal, {
+  registrarAnimais(animais, contexto.ong ? [contexto.ong] : []);
+
+  container.innerHTML = `${htmlFiltros(animais, filtrosPainel, { campanha: false, situacao: true })}<div id="lista-painel"></div>`;
+  const lista = container.querySelector('#lista-painel');
+  const resumo = container.querySelector('#resumo-filtros');
+
+  const ligarAcoes = () => {
+    ligarDetalhes(lista);
+
+
+    lista.querySelectorAll('[data-atualizacoes]').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const animal = animais.find((item) => mesmoId(item.id, botao.dataset.atualizacoes));
+        if (animal) abrirGerenciadorAtualizacoes(animal);
+      });
+    });
+
+    lista.querySelectorAll('[data-ver]').forEach((botao) => {
+      botao.addEventListener('click', () => {
+        const animal = animais.find((item) => mesmoId(item.id, botao.dataset.ver));
+        if (!animal) return;
+        const doacoesDoAnimal = doacoes.filter((doacao) => mesmoId(doacao.animalId, animal.id));
+        abrirModal({
+          titulo: `Doações para ${animal.nome}`,
+          largo: true,
+          conteudo: doacoesDoAnimal.length
+            ? tabelaDoacoes(doacoesDoAnimal)
+            : '<div class="empty-state"><p>Nenhuma doação registrada para este animal.</p></div>'
+        });
+      });
+    });
+
+    lista.querySelectorAll('[data-editar]').forEach((botao) => {
+      botao.addEventListener('click', async () => {
+        const animal = animais.find((item) => mesmoId(item.id, botao.dataset.editar));
+        if (!animal) return;
+        animalEmEdicao = animal;
+        abaAtiva = 'novo';
+        await renderAdm(contexto.app);
+      });
+    });
+
+    lista.querySelectorAll('[data-reativar]').forEach((botao) => {
+      botao.addEventListener('click', async () => {
+        const animal = animais.find((item) => mesmoId(item.id, botao.dataset.reativar));
+        if (!animal) return;
+        const confirmou = await confirmar({
+          titulo: 'Reativar animal',
+          mensagem: `Reativar ${animal.nome}? Ele voltará a aparecer para novas doações.`,
+          textoConfirmar: 'Reativar'
+        });
+        if (!confirmou) return;
+
+        try {
+          await api.reativarAnimal(animal.id);
+          toast(animal.metaAtingida
+            ? `${animal.nome} foi reativado, mas a meta já foi atingida. Use Editar para aumentar a meta.`
+            : `${animal.nome} foi reativado.`);
+          await renderAdm(contexto.app);
+        } catch (erro) {
+          toast(erro.message, 'erro');
+        }
+      });
+    });
+
+    lista.querySelectorAll('[data-inativar]').forEach((botao) => {
+      botao.addEventListener('click', async () => {
+        const animal = animais.find((item) => mesmoId(item.id, botao.dataset.inativar));
+        if (!animal) return;
+        const motivo = await escolherMotivo(animal);
+        if (!motivo) return;
+
+        try {
+          await api.inativarAnimal(animal.id, motivo);
+          toast(`${animal.nome} foi inativado.`);
+          await renderAdm(contexto.app);
+        } catch (erro) {
+          toast(erro.message, 'erro');
+        }
+      });
+    });
+  };
+
+  const desenhar = () => {
+    const visiveis = aplicarFiltros(animais, filtrosPainel);
+
+    resumo.textContent = visiveis.length === animais.length
+      ? `${animais.length} ${animais.length === 1 ? 'animal cadastrado' : 'animais cadastrados'}.`
+      : `Mostrando ${visiveis.length} de ${animais.length} animais.`;
+
+    lista.innerHTML = visiveis.length
+      ? `<div class="grid">${visiveis.map((animal) => animalCard(animal, {
     acoes: `
       <button class="btn btn-sm btn-ghost" type="button" data-ver="${esc(animal.id)}">Ver doações</button>
       <button class="btn btn-sm btn-ghost" type="button" data-editar="${esc(animal.id)}">Editar</button>
+      <button class="btn btn-sm btn-ghost" type="button" data-atualizacoes="${esc(animal.id)}">Atualizações</button>
       ${animal.status === 'ATIVO'
         ? `<button class="btn btn-sm btn-danger" type="button" data-inativar="${esc(animal.id)}">Inativar</button>`
         : `<button class="btn btn-sm btn-primary" type="button" data-reativar="${esc(animal.id)}">Reativar</button>`}`
-  })).join('')}</div>`;
+  })).join('')}</div>`
+      : '<div class="empty-state"><p>Nenhum animal encontrado com esses filtros.</p></div>';
 
-  container.querySelectorAll('[data-ver]').forEach((botao) => {
-    botao.addEventListener('click', () => {
-      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.ver));
-      if (!animal) return;
-      const doacoesDoAnimal = doacoes.filter((doacao) => mesmoId(doacao.animalId, animal.id));
-      abrirModal({
-        titulo: `Doações para ${animal.nome}`,
-        largo: true,
-        conteudo: doacoesDoAnimal.length
-          ? tabelaDoacoes(doacoesDoAnimal)
-          : '<div class="empty-state"><p>Nenhuma doação registrada para este animal.</p></div>'
-      });
-    });
-  });
+    ligarAcoes();
+  };
 
-  container.querySelectorAll('[data-editar]').forEach((botao) => {
-    botao.addEventListener('click', async () => {
-      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.editar));
-      if (!animal) return;
-      animalEmEdicao = animal;
-      abaAtiva = 'novo';
-      await renderAdm(contexto.app);
-    });
-  });
-
-  container.querySelectorAll('[data-reativar]').forEach((botao) => {
-    botao.addEventListener('click', async () => {
-      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.reativar));
-      if (!animal) return;
-      const confirmou = await confirmar({
-        titulo: 'Reativar animal',
-        mensagem: `Reativar ${animal.nome}? Ele voltará a aparecer para novas doações.`,
-        textoConfirmar: 'Reativar'
-      });
-      if (!confirmou) return;
-
-      try {
-        await api.reativarAnimal(animal.id);
-        toast(animal.metaAtingida
-          ? `${animal.nome} foi reativado, mas a meta já foi atingida. Use Editar para aumentar a meta.`
-          : `${animal.nome} foi reativado.`);
-        await renderAdm(contexto.app);
-      } catch (erro) {
-        toast(erro.message, 'erro');
-      }
-    });
-  });
-
-  container.querySelectorAll('[data-inativar]').forEach((botao) => {
-    botao.addEventListener('click', async () => {
-      const animal = animais.find((item) => mesmoId(item.id, botao.dataset.inativar));
-      if (!animal) return;
-      const motivo = await escolherMotivo(animal);
-      if (!motivo) return;
-
-      try {
-        await api.inativarAnimal(animal.id, motivo);
-        toast(`${animal.nome} foi inativado.`);
-        await renderAdm(contexto.app);
-      } catch (erro) {
-        toast(erro.message, 'erro');
-      }
-    });
-  });
+  ligarFiltros(container, filtrosPainel, desenhar);
+  desenhar();
 }
 
 function renderNovoAnimal(container, contexto) {

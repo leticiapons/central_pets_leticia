@@ -2,6 +2,7 @@ import * as api from '../api.js';
 import { esc, animalCard, toast } from '../components.js';
 import { abrirDoacao } from '../doacao-modal.js';
 import { aplicarFiltros, filtrosIniciais, htmlFiltros, ligarFiltros } from '../filtros-animais.js';
+import { ligarDetalhes, registrarAnimais } from '../detalhes-animal.js';
 import { mesmoId } from '../ids.js';
 import { getUsuarioLogado } from '../state.js';
 
@@ -31,6 +32,7 @@ export async function renderUsuario(app) {
 
   if (!animais.length) return;
 
+  registrarAnimais(animais, ongs);
   const lista = app.querySelector('#lista-animais');
   const resumo = app.querySelector('#resumo-filtros');
 
@@ -46,6 +48,8 @@ export async function renderUsuario(app) {
         acoes: `<button class="btn btn-primary btn-sm" type="button" data-doar="${esc(animal.id)}">Doar para ${esc(animal.nome)}</button>`
       })).join('')}</div>`
       : '<div class="empty-state"><p>Nenhum animal encontrado com esses filtros.</p></div>';
+
+    ligarDetalhes(lista);
 
     lista.querySelectorAll('[data-doar]').forEach((botao) => {
       botao.addEventListener('click', () => {
